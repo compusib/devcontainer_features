@@ -12,7 +12,6 @@ fi
 EOCMD
 )
 START_CMD='eval $(starship init bash)'
-env >> $_REMOTE_USER_HOME/.bashrc
 
 if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then 
     #bashrc installed

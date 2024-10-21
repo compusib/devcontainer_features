@@ -23,7 +23,7 @@
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
         "ghcr.io/compusib/devcontainer_features/bashrc:0": {},
         "ghcr.io/compusib/devcontainer_features/argbash:0": {},
-        "ghcr.io/compusib/devcontainer-features/starship:0": {}
+        "ghcr.io/compusib/devcontainer_features/starship:latest": {}
     },
     "remoteUser": "node",
     "updateContentCommand": "npm install -g @devcontainers/cli",
