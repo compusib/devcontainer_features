@@ -17,5 +17,5 @@
     "containerEnv": {
         "WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
     },
-    "postAttachCommand": "bash -c \"[ ! -f ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh ] && echo 'CONTAINER_WORKSPACE_FOLDER=${containerWorkspaceFolder}' > ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh\" || echo '~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh already exists'"
+    "postAttachCommand": "bash -c \"[ ! -f ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh ] && echo 'export CONTAINER_WORKSPACE_FOLDER=${containerWorkspaceFolder}' > ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh\" || echo '~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh already exists'"
 }
