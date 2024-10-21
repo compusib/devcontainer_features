@@ -21,5 +21,8 @@
         "ghcr.io/devcontainers/features/docker-in-docker:2": {}
     },
     "remoteUser": "node",
-    "updateContentCommand": "npm install -g @devcontainers/cli"
+    "updateContentCommand": "npm install -g @devcontainers/cli",
+    "mounts": [
+        "source=/data/workspace,target=/workspaces/all,type=bind"
+    ]
 }
