@@ -1,0 +1,21 @@
+{
+    "id": "bashrc",
+    "version": "0.0.1",
+    "name": "bashrc",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/src/bashrc/Readme.md",
+    "description": "set startup options",
+    "options": {
+        "version": {
+            "default": "latest",
+            "description": "Select the version to install.",
+            "proposals": [
+                "latest"
+            ],
+            "type": "string"
+        }
+    },
+    "containerEnv": {
+        "WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
+    },
+    "postAttachCommand": "bash -c \"[ ! -f ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh ] && echo 'CONTAINER_WORKSPACE_FOLDER=${containerWorkspaceFolder}' > ~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh\" || echo '~/.bashrc.d/CONTAINER_WORKSPACE_FOLDER_env.sh already exists'"
+}
