@@ -1,6 +1,6 @@
 ## Starship extension
 
-Installs [starship shell](https://starship.rs/) using the feature [`ghcr.io/devcontainers-extra/features/starship`](https://github.com/devcontainers-extra/features/tree/main/src/starship).
+Installs [starship shell](https://starship.rs/).
 
 
 ### `startFromBashRc` Option
