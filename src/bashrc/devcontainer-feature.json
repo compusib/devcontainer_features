@@ -1,6 +1,6 @@
 {
     "id": "bashrc",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "name": "bashrc",
     "documentationURL": "https://github.com/compusib/devcontainer_features/src/bashrc/Readme.md",
     "description": "set startup options",
