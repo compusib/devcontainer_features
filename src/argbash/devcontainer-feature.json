@@ -1,0 +1,33 @@
+{
+    "id": "argbash",
+    "version": "0.0.1",
+    "name": "argbash",
+    "documentationURL": "https://github.com/compusib/compujs/src/argbash/README.md",
+    "description": "Installs the argbash utility",
+    "options": {
+        "version": {
+            "default": "2.10.0",
+            "description": "Select the argbash version.",
+            "proposals": [
+                "2.10.0"
+            ],
+            "type": "string"
+        },
+        "installPrefix": {
+            "default": "/usr/local",
+            "description": "Select the installation prefix.",
+            "proposals": [
+                "/usr/local"
+            ],
+            "type": "string"
+        }
+    },
+    "dependsOn": {
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages": {
+            "packages": "build-essential,autoconf,ca-certificates,wget"
+        }
+    },
+    "installsAfter": [
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages"
+    ]
+}
