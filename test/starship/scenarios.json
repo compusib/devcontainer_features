@@ -1,0 +1,9 @@
+{
+    "with_bashrc": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "ghcr.io/compusib/devcontainer_features/bashrc:0": {}
+        }
+        
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "id": "starship",
+    "version": "0.0.1",
+    "name": "starship",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/src/starship/README.md",
+    "description": "set startup options",
+    "options": {
+        "version": {
+            "default": "latest",
+            "description": "Select the version to install.",
+            "proposals": [
+                "latest"
+            ],
+            "type": "string"
+        },
+        "configFile": {
+            "default": "\\$GIT_ROOT/.devcontainer/config/starship.toml",
+            "type": "string",
+            "description": "Config file location. If a file is found at that location, then the STARSHIP_CONFIG env is pointed to it"
+        },
+        "startFromBashRc": {
+            "default": true,
+            "type": "boolean",
+            "description": "Sets starship up to start from bashrc. Turn off to manually start starship shell. See notes "
+        }
+    },
+    "dependsOn": {
+        "ghcr.io/compusib/devcontainer_features/bashrc": {}
+    }
+}
