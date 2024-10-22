@@ -17,7 +17,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/.devcontainer/config |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 
 ## bashrc feature
 
@@ -60,7 +60,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/.devcontainer/config |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
 characters need to be escaped like so: `\\
 # bashrc (bashrc)
@@ -81,7 +81,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/.devcontainer/config |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
 .
 This is to prevent vscode from substituting the `
@@ -103,7 +103,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/.devcontainer/config |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
  variable, and for json to accept the slash which itself needs escaping to`\\`.
 `\\${CONTAINER_WORKSPACE_FOLDER}`  as an example refers to the mounted root of the container. 
