@@ -1,6 +1,6 @@
 {
     "id": "bashrc",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "name": "bashrc",
     "documentationURL": "https://github.com/compusib/devcontainer_features/src/bashrc/README.md",
     "description": "set startup options",
@@ -19,7 +19,7 @@
             "description": "Where the root of the git directory is located. Defaults to the value of the workspace folder"
         },
         "pathAppend": {
-            "default": "\\$CONTAINER_WORKSPACE_FOLDER/.devcontainer/config",
+            "default": "\\$CONTAINER_WORKSPACE_FOLDER/scripts",
             "type": "string",
             "description": "Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh"
         }

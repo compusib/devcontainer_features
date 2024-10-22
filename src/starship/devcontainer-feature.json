@@ -1,6 +1,6 @@
 {
     "id": "starship",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "name": "starship",
     "documentationURL": "https://github.com/compusib/devcontainer_features/src/starship/README.md",
     "description": "set startup options",
