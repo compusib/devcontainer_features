@@ -1,23 +1,30 @@
 
-#. debug.sh
-mkdir -p "${_REMOTE_USER_HOME}/.bashrc.d"
-cat >> "$_REMOTE_USER_HOME/.bashrc" <<EOBASHRC 
-######## CONTAINER FEATURE bashrc #####################
-#This reads all files ending in .sh from ~/.bashrc.d
+RUNFILE="$_REMOTE_USER_HOME/.devcontainer/bashrcFeatureInstallCounter"
 
-for filename in \$HOME/.bashrc.d/*.sh; do
-    . \$filename
-done
-######### end CONTAINER FEATURE bashrc ################
-EOBASHRC
-
-if [ $PATHAPPEND ]; then
-    echo "export PATH=${PATH}:$PATHAPPEND" > ${_REMOTE_USER_HOME}/.bashrc.d/10_bash_path_append.sh
+if [ -e $RUNFILE ]; then
+    echo "RUNFILE exists"
+else
+   ./do_install.sh
 fi
 
-if [ $GITROOT ]; then
-    echo "export GIT_ROOT=$GITROOT" >  ${_REMOTE_USER_HOME}/.bashrc.d/01_GIT_ROOT_env.sh
-fi
+# function run_count {
+#     local RUNFILE=$1
+#     local count;
+#     if [ -e $RUNFILE ]; then
+#         if [ ! -d $(dirname $RUNFILE) ]; then
+#             mkdir -p $(dirname $RUNFILE)
+#         fi
+#     else
+#         local count=$(cat $RUNFILE)
+#     fi
+#     ((count++))
+#     echo $count > $RUNFILE
+#     echo $count
+# }
+# count=$(run_count $RUNFILE)
+# echo !!!!!!!!!!!!!!!!COUNT=$count
+# if [ $count =  1 ] ; then
 
+#    . ./do_install.sh
+# fi
 
-chown -R "${_REMOTE_USER}" "${_REMOTE_USER_HOME}/.bashrc.d"
