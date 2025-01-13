@@ -1,5 +1,5 @@
 
-RUNFILE="$_REMOTE_USER_HOME/.devcontainer/bashrcFeatureInstallCounter"
+RUNFILE="$_REMOTE_USER_HOME/.bashrcFeatureInstallCounter"
 
 if [ -e $RUNFILE ]; then
   echo "RUNFILE exists"
