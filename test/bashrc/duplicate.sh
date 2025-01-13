@@ -8,7 +8,7 @@ source dev-container-features-test-lib
 #bash || echo exit interactive && echo exit interactive
 #bash
 if [ -e /home/vscode/.bashrc ]; then
-#    check "bashrc does not write twice to ~/.bashrc" bash -c "cat /home/vscode/.bashrc | grep 'start CONTAINER FEATURE' | wc -l | grep 1"
+    check "bashrc does not write twice to ~/.bashrc" bash -c "cat /home/vscode/.bashrc | grep 'start CONTAINER FEATURE' | wc -l | grep 1"
 fi
 
 # Report results

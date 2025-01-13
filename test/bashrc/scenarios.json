@@ -1,3 +1,10 @@
 {
-
+"set_git_root": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "bashrc": {
+                "gitRoot": "/test/some/path"
+            }
+        }
+    }
 }
