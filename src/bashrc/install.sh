@@ -2,9 +2,10 @@
 RUNFILE="$_REMOTE_USER_HOME/.devcontainer/bashrcFeatureInstallCounter"
 
 if [ -e $RUNFILE ]; then
-    echo "RUNFILE exists"
+  echo "RUNFILE exists"
 else
-   . ./do_install.sh
+  touch  $RUNFILE
+  . ./do_install.sh
 fi
 
 # function run_count {
