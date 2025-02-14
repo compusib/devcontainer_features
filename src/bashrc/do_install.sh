@@ -11,7 +11,7 @@ done
 EOBASHRC
 
 if [ $PATHAPPEND ]; then
-    echo "export PATH=${PATH}:$PATHAPPEND" > ${_REMOTE_USER_HOME}/.bashrc.d/10_bash_path_append.sh
+    echo "export PATH=\${PATH}:$PATHAPPEND" > ${_REMOTE_USER_HOME}/.bashrc.d/10_bash_path_append.sh
 fi
 
 if [ $GITROOT ]; then
