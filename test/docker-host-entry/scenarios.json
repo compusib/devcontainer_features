@@ -1,0 +1,11 @@
+{
+    "customised-docker-host-alias": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "docker-host-entry": {
+                "dockerHostAlias": "customised-docker-host-alias"
+            }
+        }
+        
+    }
+}
