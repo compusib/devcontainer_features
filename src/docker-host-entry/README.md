@@ -1,5 +1,5 @@
 
-# starship (starship)
+# docker-host-entry (docker-host-entry)
 
 set startup options
 
@@ -7,7 +7,7 @@ set startup options
 
 ```json
 "features": {
-    "ghcr.io/compusib/devcontainer_features/starship:0": {}
+    "ghcr.io/compusib/devcontainer_features/docker-host-entry:0": {}
 }
 ```
 
@@ -16,15 +16,17 @@ set startup options
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
-| configFile | Config file location. If a file is found at that location, then the STARSHIP_CONFIG env is pointed to it | string | \$GIT_ROOT/.devcontainer/config/starship.toml |
-| startFromBashRc | Sets starship up to start from bashrc. Turn off to manually start starship shell. See notes  | boolean | true |
+| dockerHostAlias | Set the docker host alias to add to /etc/hosts. The container's host ip address will be aliased by this name inside the container. | string | host |
+| useBashRc | Sets the docker host from bash_rc. See notes  | boolean | true |
 
 ## Starship extension
 
-Installs [starship shell](https://starship.rs/).
+Adds an entry to `/etc/hosts`
+the default alias is `"host"`
+Issuing commands such as `ssh host` or `ping host` will communicate with the host ip from inside the container
 
 
-### `startFromBashRc` Option
+### `useBashRc` Option
 
 This option only has an effect if `ghcr.io/compusib/devcontainer_features/bashrc` is installed alongside starship.
 If this is not the case the .bashrc can be manually altered to start starship by appending this line to `~.bashrc`
@@ -37,4 +39,4 @@ If this is not the case the .bashrc can be manually altered to start starship by
 
 ---
 
-_Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/compusib/devcontainer_features/blob/main/src/starship/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
+_Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/compusib/devcontainer_features/blob/main/src/docker-host-entry/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
