@@ -1,0 +1,30 @@
+{
+    "id": "docker-host-entry",
+    "version": "0.0.3",
+    "name": "docker-host-entry",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/src/docker-host-entry/README.md",
+    "description": "set startup options",
+    "options": {
+        "version": {
+            "default": "latest",
+            "description": "Select the version to install.",
+            "proposals": [
+                "latest"
+            ],
+            "type": "string"
+        },
+        "dockerHostAlias": {
+            "default": "host",
+            "description": "Set the docker host alias to add to /etc/hosts. The container's host ip address will be aliased by this name inside the container.",
+            "type": "string"
+        },
+        "useBashRc": {
+            "default": true,
+            "type": "boolean",
+            "description": "Sets the docker host from bash_rc. See notes "
+        }
+    },
+    "dependsOn": {
+        "ghcr.io/compusib/devcontainer_features/bashrc": {}
+    }
+}
