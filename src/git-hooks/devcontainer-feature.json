@@ -1,0 +1,42 @@
+{
+    "id": "git-hooks",
+    "version": "1.0.0",
+    "name": "Git Hooks Setup",
+    "description": "Installs and configures modular git hooks system with argbash-enhanced setup script",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/git-hooks/README.md",
+    "dependsOn": {
+        "ghcr.io/devcontainers/features/git": {}
+    },
+    "options": {
+        "hooksDir": {
+            "type": "string",
+            "default": "git/hooks",
+            "description": "Directory containing git hooks relative to workspace root"
+        },
+        "autoSetup": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically set up git hooks after container creation"
+        },
+        "verbose": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable verbose output during setup"
+        },
+        "gitSafeDirectory": {
+            "type": "string",
+            "default": "/workspaces/*",
+            "description": "Git safe.directory pattern to configure (supports wildcards). Set to empty string to skip configuration."
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": []
+        }
+    },
+    "containerEnv": {
+        "SETUP_GIT_HOOKS_DIR": "${hooksDir}",
+        "SETUP_GIT_HOOKS_VERBOSE": "${verbose}"
+    },
+    "postCreateCommand": "if [ \"${autoSetup}\" = \"true\" ]; then setup-git-hooks; fi"
+}

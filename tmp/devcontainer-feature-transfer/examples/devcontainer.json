@@ -1,0 +1,21 @@
+{
+    "name": "Example Project with Git Hooks",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/compusib/devcontainer_features/setup-git-hooks:1": {
+            "hooksDir": "git/hooks",
+            "autoSetup": true,
+            "verbose": true,
+            "gitSafeDirectory": "/workspaces/*"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "git.enableSmartCommit": true,
+                "git.confirmSync": false
+            }
+        }
+    },
+    "postCreateCommand": "echo 'Development environment ready with git hooks!'"
+}
