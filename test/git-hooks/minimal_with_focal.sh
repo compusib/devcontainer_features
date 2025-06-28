@@ -4,7 +4,7 @@ set -e
 
 # Import test library
 source dev-container-features-test-lib
-
+source ./_create_git_directory.sh
 # Test minimal setup with focal base image and non-root user
 check "setup-git-hooks command is available" which setup-git-hooks
 

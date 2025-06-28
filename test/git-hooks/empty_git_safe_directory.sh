@@ -4,7 +4,7 @@ set -e
 
 # Import test library
 source dev-container-features-test-lib
-
+source ./_create_git_directory.sh
 # Test empty git safe directory scenario
 check "setup-git-hooks command is available" which setup-git-hooks
 

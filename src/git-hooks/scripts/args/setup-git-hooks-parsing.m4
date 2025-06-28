@@ -16,8 +16,9 @@
 # This script installs the project's git hooks with enhanced options
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOKS_SOURCE_DIR="$SCRIPT_DIR/$_arg_hooks_dir"
-HOOKS_TARGET_DIR="$SCRIPT_DIR/$_arg_target_dir"
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
+HOOKS_SOURCE_DIR="$GIT_ROOT/$_arg_hooks_dir"
+HOOKS_TARGET_DIR="$GIT_ROOT/$_arg_target_dir"
 
 # Verbose output function
 verbose() {

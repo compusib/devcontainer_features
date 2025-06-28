@@ -14,7 +14,7 @@ if command -v git >/dev/null 2>&1; then
 else
     verbose "Git command not found, using script directory as fallback"
 fi
-GIT_ROOT="${GIT_ROOT:-$SCRIPT_DIR}"
+GIT_ROOT="${GIT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")}"
 
 HOOKS_SOURCE_DIR="$GIT_ROOT/$_arg_hooks_dir"
 HOOKS_TARGET_DIR="$GIT_ROOT/$_arg_target_dir"

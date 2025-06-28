@@ -1,12 +1,18 @@
 {
     "basic_setup": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {}
         }
     },
     "custom_configuration": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {
                 "hooksDir": "custom/hooks/path",
@@ -18,6 +24,9 @@
     },
     "manual_setup_only": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {
                 "autoSetup": false
@@ -27,6 +36,9 @@
     },
     "multi_repository_setup": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {
                 "autoSetup": false,
@@ -48,11 +60,15 @@
             }
         },
         "containerEnv": {
-            "GIT_HOOKS_CUSTOM_VAR": "value"
+            "GIT_HOOKS_CUSTOM_VAR": "value",
+             "GIT_ROOT": "/workspace/git_test"
         }
     },
     "minimal_with_focal": {
         "image": "mcr.microsoft.com/devcontainers/base:focal",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "ghcr.io/devcontainers/features/common-utils:1": {
                 "installZsh": false,
@@ -68,6 +84,9 @@
     },
     "no_auto_setup_verbose": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {
                 "autoSetup": false,
@@ -78,6 +97,9 @@
     },
     "empty_git_safe_directory": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "GIT_ROOT": "/workspace/git_test"
+        },
         "features": {
             "git-hooks": {
                 "gitSafeDirectory": ""
