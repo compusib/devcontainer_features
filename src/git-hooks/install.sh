@@ -39,6 +39,19 @@ echo "📦 Installing argbash library to ${FEATURE_LIB_TARGET_DIR}"
 mkdir -p "${FEATURE_LIB_TARGET_DIR}"
 cp -r ${FEATURE_DIR}/scripts/lib "${FEATURE_LIB_TARGET_DIR}/git-hooks"
 
+if [ -n "$AUTOSETUP" ]; then
+  echo "🔧 Auto-setup enabled, setting the AUTOSETUP ENV var"
+  ENV_CMD="export AUTOSETUP=\"$AUTOSETUP\""
+  if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then 
+      #bashrc installed
+      echo "$ENV_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/30_git_hooks_feature.sh"
+      chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/30_git_hooks_feature.sh"
+  else
+      #bashrc not installed
+      echo "$ENV_CMD" >> "$_REMOTE_USER_HOME/.bashrc"
+fi
+
+
 # Make the parsing script executable
 chmod +x ${FEATURE_LIB_TARGET_DIR}/git-hooks/bash/args/*.sh
 
