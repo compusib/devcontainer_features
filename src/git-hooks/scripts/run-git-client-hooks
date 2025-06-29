@@ -5,13 +5,51 @@
 
 set -e  # Exit on first error
 
-# Get the actual directory where this script is located (follow symlinks)
-SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+# Function to find git root directory (same as in setup-git-hooks)
+get_git_root() {
+    local current_dir="${1:-$(pwd)}"
+    local search_dir="$current_dir"
+    
+    # If we're inside a .git directory, move up until we're outside it
+    while [[ "$search_dir" == *"/.git"* ]] && [ "$search_dir" != "/" ]; do
+        search_dir="$(dirname "$search_dir")"
+    done
+    
+    # First try git rev-parse --show-toplevel if git is available and we're not in .git
+    if command -v git >/dev/null 2>&1; then
+        local git_root
+        git_root=$(cd "$search_dir" && git rev-parse --show-toplevel 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$git_root" ]; then
+            echo "$git_root"
+            return 0
+        fi
+    fi
+    
+    # Fallback: search for .git directory in parent paths
+    while [ "$search_dir" != "/" ]; do
+        if [ -d "$search_dir/.git" ] || [ -f "$search_dir/.git" ]; then
+            echo "$search_dir"
+            return 0
+        fi
+        search_dir="$(dirname "$search_dir")"
+    done
+    
+    # No git repository found
+    return 1
+}
+
+# Get the git repository root
+GIT_ROOT=$(get_git_root)
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Not in a git repository"
+    exit 1
+fi
 
 # Get the name this script was called with (the symlink name)
 HOOK_NAME="$(basename "$0")"
-HOOKS_DIR="$SCRIPT_DIR/${HOOK_NAME}.d"
+
+# Look for hooks in the standard git/hooks directory
+HOOKS_DIR="$GIT_ROOT/git/hooks/${HOOK_NAME}.d"
 
 echo "🚀 Running $HOOK_NAME hooks..."
 

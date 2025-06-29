@@ -88,5 +88,38 @@
                 "gitSafeDirectory": ""
             }
         }
+    },
+    "hook_fails_commit": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true
+            }
+        }
+    },
+    "hook_succeeds_commit": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true
+            }
+        }
+    },
+    "one_failing_hook_commit_fails": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv":{
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true
+            }
+        }
     }
 }
