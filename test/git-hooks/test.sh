@@ -48,8 +48,6 @@ check "setup-git-hooks can show help" setup-git-hooks --help
 
 check "git is available" which git
 
-check "environment variables are set" test -n "$SETUP_GIT_HOOKS_DIR"
-
 # Test that the script can be run (will create a dummy git repo for testing)
 check "can initialize git repo and run setup-git-hooks" bash -c "
     mkdir -p /tmp/test-repo && 

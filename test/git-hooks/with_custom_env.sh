@@ -8,16 +8,9 @@ source dev-container-features-test-lib
 # Test custom environment variables scenario
 check "setup-git-hooks command is available" which setup-git-hooks
 
-check "custom hooks directory is configured" bash -c "
-    test '\$SETUP_GIT_HOOKS_DIR' = 'tools/git-hooks'
-"
-
-check "verbose mode is enabled" bash -c "
-    test '\$SETUP_GIT_HOOKS_VERBOSE' = 'true'
-"
 
 check "custom environment variable is available" bash -c "
-    test '\$GIT_HOOKS_CUSTOM_VAR' = 'value'
+    test \$GIT_HOOKS_CUSTOM_VAR = 'value'
 "
 
 # Test functionality with custom environment

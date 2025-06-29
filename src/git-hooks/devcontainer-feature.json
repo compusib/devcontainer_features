@@ -34,9 +34,5 @@
             "extensions": []
         }
     },
-    "containerEnv": {
-        "SETUP_GIT_HOOKS_DIR": "${hooksDir}",
-        "SETUP_GIT_HOOKS_VERBOSE": "${verbose}"
-    },
-    "postCreateCommand": "if [ \"${autoSetup}\" = \"true\" ]; then setup-git-hooks; fi"
+    "postCreateCommand": "if [ \"${AUTOSETUP}\" = \"true\" ]; then cd $GIT_ROOT; setup-git-hooks; fi"
 }

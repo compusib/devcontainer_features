@@ -1,5 +1,10 @@
 #!/bin/bash
 
+main_scripts_to_install=(
+    "setup-git-hooks"
+    "run-git-client-hooks"
+)
+
 set -e
 
 echo "Installing setup-git-hooks feature..."
@@ -18,10 +23,17 @@ fi
 # Get the directory where this script is located
 FEATURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Install the main script to /usr/local/bin
-echo "📦 Installing setup-git-hooks to /usr/local/bin/"
-cp "${FEATURE_DIR}/scripts/setup-git-hooks" /usr/local/bin/
-chmod +x /usr/local/bin/setup-git-hooks
+# Install the main scripts to /usr/local/bin
+
+for script in "${main_scripts_to_install[@]}"; do
+    if [[ -f "${FEATURE_DIR}/scripts/${script}" ]]; then
+        echo "📦 Installing ${script} to /usr/local/bin/"
+        cp "${FEATURE_DIR}/scripts/${script}" /usr/local/bin/
+        chmod +x "/usr/local/bin/${script}"
+    else
+        echo "⚠️  Script ${script} not found in ${FEATURE_DIR}/scripts/"
+    fi
+done
 
 # Install argbash library to /usr/local/lib/argbash
 echo "📦 Installing argbash library to /usr/local/lib/argbash/"

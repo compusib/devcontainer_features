@@ -17,10 +17,6 @@ check "common-utils feature is working" bash -c "
     test ! -d /home/octocat/.oh-my-zsh || echo 'Oh-my-zsh correctly not installed'
 "
 
-check "verbose mode is disabled" bash -c "
-    test '\$SETUP_GIT_HOOKS_VERBOSE' = 'false'
-"
-
 # Test basic functionality as non-root user
 check "can setup git hooks as octocat user" bash -c "
     mkdir -p /tmp/test-focal && 

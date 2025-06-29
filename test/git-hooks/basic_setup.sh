@@ -10,10 +10,6 @@ check "setup-git-hooks command is available" which setup-git-hooks
 
 check "git is available" which git
 
-check "default environment variables are set" bash -c "
-    test '$SETUP_GIT_HOOKS_DIR' = 'git/hooks' &&
-    test '$SETUP_GIT_HOOKS_VERBOSE' = 'false'
-"
 
 # Test basic functionality
 check "basic git hooks setup works" bash -c "

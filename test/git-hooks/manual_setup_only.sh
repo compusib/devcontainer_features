@@ -4,7 +4,6 @@ set -e
 
 # Import test library
 source dev-container-features-test-lib
-source ./_create_git_directory.sh
 # Test manual setup scenario - autoSetup should be false
 check "setup-git-hooks command is available" which setup-git-hooks
 
@@ -20,8 +19,8 @@ check "no automatic hook setup occurred" bash -c "
 # Test manual setup works
 check "manual setup works correctly" bash -c "
     cd /tmp/test-manual && 
-    mkdir -p my-hooks && 
-    echo '#!/bin/bash' > my-hooks/pre-commit && 
+    mkdir -p my-hooks/pre-commit.d && 
+    echo '#!/bin/bash' > my-hooks/pre-commit.d/test && 
     setup-git-hooks --hooks-dir my-hooks --verbose &&
     test -L .git/hooks/pre-commit
 "

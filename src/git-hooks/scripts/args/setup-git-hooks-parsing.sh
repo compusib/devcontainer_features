@@ -1,7 +1,31 @@
 #!/bin/bash
 
+get_git_root() {
+    local current_dir="${1:-$(pwd)}"
+    local search_dir="$current_dir"
+
+    # If we're inside a .git directory, move up until we're outside it
+    while [ "$search_dir" == *"/.git"* ] &&  "$search_dir" != "/" ; do
+        search_dir="$(dirname "$search_dir")"
+    done
+
+    # First try git rev-parse --show-toplevel if git is available and we're not in .git
+    if command -v git >/dev/null 2>&1; then
+        local git_root
+        git_root=$(cd "$search_dir" && git rev-parse --show-toplevel 2>/dev/null)
+        if  [[ $? -eq 0 ]] && [[ -n "$git_root" ]]; then
+            echo "$git_root"
+            return 0
+        fi
+    fi
+
+    # No git repository found
+    return 1
+}
+
 # ARG_OPTIONAL_SINGLE([hooks-dir],[d],[Custom source directory for hooks],[git/hooks])
 # ARG_OPTIONAL_SINGLE([target-dir],[t],[Custom target directory for git hooks],[.git/hooks])
+# ARG_OPTIONAL_SINGLE([repo-dir],[r],[Custom git repository directory],["$(get_git_root .)"])
 # ARG_OPTIONAL_BOOLEAN([dry-run],[n],[Show what would be done without making changes])
 # ARG_OPTIONAL_BOOLEAN([force],[f],[Force overwrite existing hooks without prompting])
 # ARG_OPTIONAL_BOOLEAN([list],[l],[List available hook types and exit])
@@ -26,7 +50,7 @@ die()
 
 begins_with_short_option()
 {
-	local first_option all_short_options='dtnflvch'
+	local first_option all_short_options='dtrnflvch'
 	first_option="${1:0:1}"
 	test "$all_short_options" = "${all_short_options/$first_option/}" && return 1 || return 0
 }
@@ -34,6 +58,7 @@ begins_with_short_option()
 # THE DEFAULTS INITIALIZATION - OPTIONALS
 _arg_hooks_dir="git/hooks"
 _arg_target_dir=".git/hooks"
+_arg_repo_dir="$(get_git_root .)"
 _arg_dry_run="off"
 _arg_force="off"
 _arg_list="off"
@@ -44,9 +69,10 @@ _arg_clean="off"
 print_help()
 {
 	printf '%s\n' "Git hooks setup script with argbash - installs project git hooks"
-	printf 'Usage: %s [-d|--hooks-dir <arg>] [-t|--target-dir <arg>] [-n|--(no-)dry-run] [-f|--(no-)force] [-l|--(no-)list] [-v|--(no-)verbose] [-c|--(no-)clean] [-h|--help]\n' "$0"
+	printf 'Usage: %s [-d|--hooks-dir <arg>] [-t|--target-dir <arg>] [-r|--repo-dir <arg>] [-n|--(no-)dry-run] [-f|--(no-)force] [-l|--(no-)list] [-v|--(no-)verbose] [-c|--(no-)clean] [-h|--help]\n' "$0"
 	printf '\t%s\n' "-d, --hooks-dir: Custom source directory for hooks (default: 'git/hooks')"
 	printf '\t%s\n' "-t, --target-dir: Custom target directory for git hooks (default: '.git/hooks')"
+	printf '\t%s\n' "-r, --repo-dir: Custom git repository directory (default: '$(get_git_root .)')"
 	printf '\t%s\n' "-n, --dry-run, --no-dry-run: Show what would be done without making changes (off by default)"
 	printf '\t%s\n' "-f, --force, --no-force: Force overwrite existing hooks without prompting (off by default)"
 	printf '\t%s\n' "-l, --list, --no-list: List available hook types and exit (off by default)"
@@ -83,6 +109,17 @@ parse_commandline()
 				;;
 			-t*)
 				_arg_target_dir="${_key##-t}"
+				;;
+			-r|--repo-dir)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				_arg_repo_dir="$2"
+				shift
+				;;
+			--repo-dir=*)
+				_arg_repo_dir="${_key##--repo-dir=}"
+				;;
+			-r*)
+				_arg_repo_dir="${_key##-r}"
 				;;
 			-n|--no-dry-run|--dry-run)
 				_arg_dry_run="on"

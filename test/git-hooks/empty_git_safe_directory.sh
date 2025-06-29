@@ -32,9 +32,5 @@ check "basic git hooks setup still works" bash -c "
     setup-git-hooks
 "
 
-check "environment variables are still set correctly" bash -c "
-    test '\$SETUP_GIT_HOOKS_DIR' = 'git/hooks' &&
-    test '\$SETUP_GIT_HOOKS_VERBOSE' = 'false'
-"
 
 reportResults

@@ -8,16 +8,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"/usr/local/lib/argbash"}"
 source "$ARGBASH_ARGS_DIR/setup-git-hooks-parsing.sh"
 
-# Determine git root with fallback to script directory
-if command -v git >/dev/null 2>&1; then
-    GIT_ROOT="${GIT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}"
-else
-    verbose "Git command not found, using script directory as fallback"
-fi
-GIT_ROOT="${GIT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")}"
+# Function to find git root directory
 
-HOOKS_SOURCE_DIR="$GIT_ROOT/$_arg_hooks_dir"
-HOOKS_TARGET_DIR="$GIT_ROOT/$_arg_target_dir"
+
+
+
+HOOKS_SOURCE_DIR="$_arg_repo_dir/$_arg_hooks_dir"
+HOOKS_TARGET_DIR="$_arg_repo_dir/$_arg_target_dir"
 
 # Verbose output function
 verbose() {
@@ -41,7 +38,7 @@ list_hook_types() {
 
     if [ ! -d "$HOOKS_SOURCE_DIR" ]; then
         echo "⚠️  Hooks directory not found at $HOOKS_SOURCE_DIR"
-        if [ "$GIT_ROOT" = "$SCRIPT_DIR" ]; then
+        if [ "$_arg_repo_dir" = "$SCRIPT_DIR" ]; then
             echo "💡 Run this script from a git repository or ensure $_arg_hooks_dir exists"
         else
             echo "💡 Consider creating the hooks directory structure or check the path"
@@ -107,14 +104,14 @@ setup_hooks() {
     if [ "$_arg_verbose" = "on" ]; then
         echo "🔍 [VERBOSE] Source directory: $HOOKS_SOURCE_DIR"
         echo "🔍 [VERBOSE] Target directory: $HOOKS_TARGET_DIR"
-        echo "🔍 [VERBOSE] Git root: $GIT_ROOT"
+        echo "🔍 [VERBOSE] Git root: $_arg_repo_dir"
     fi
 
     echo "🔧 Setting up git hooks..."
 
     # Check if we're in a git repository (only if git is available)
-    if command -v git >/dev/null 2>&1 && [ "$GIT_ROOT" != "$SCRIPT_DIR" ] && [ ! -d ".git" ] && [ ! -d "$GIT_ROOT/.git" ]; then
-        echo "⚠️  Warning: Not in a git repository root directory"
+    if command -v git >/dev/null 2>&1 && [ ! -d ".git" ] && [ ! -d "$_arg_repo_dir/.git" ]; then
+        echo "⚠️  Warning: Not in a git repository root directory (current directory: $(pwd))"
         echo "💡 Continuing anyway - hooks will be set up but may not function until in a git repository"
         verbose "Using fallback directory structure"
     fi
@@ -152,7 +149,7 @@ setup_hooks() {
     echo "📋 Found hook types: ${hook_types[*]}"
 
     # Install the general hook runner and create symlinks for each hook type
-    general_hook_source="$(realpath "$HOOKS_SOURCE_DIR/run-git-client-hooks")"
+    general_hook_source="$(which run-git-client-hooks)"
 
     if [ ! -f "$general_hook_source" ]; then
         echo "❌ Error: run-git-client-hooks script not found at $general_hook_source"
