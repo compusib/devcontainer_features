@@ -13,8 +13,8 @@ This devcontainer feature installs the `setup-git-hooks` script system-wide, mak
 ### `hooksDir` (string, default: "git/hooks")
 Directory containing git hooks relative to workspace root.
 
-### `autoSetup` (boolean, default: true)
-Automatically set up git hooks after container creation.
+### `autoSetup` (string, default: "/workspaces")
+Space-separated list of paths containing git repositories for automatic hook setup. Set to empty string to disable auto-setup. Each path should point to a directory containing a git repository where hooks should be installed automatically after container creation.
 
 ### `verbose` (boolean, default: false)
 Enable verbose output during setup.
@@ -27,7 +27,7 @@ Example configuration in `devcontainer.json`:
 "features": {
   "./features/git-hooks": {
     "hooksDir": "git/hooks",
-    "autoSetup": true,
+    "autoSetup": "/workspaces/myproject /data/another-repo",
     "verbose": false,
     "gitSafeDirectory": "/data/workspace/ansible"
   }

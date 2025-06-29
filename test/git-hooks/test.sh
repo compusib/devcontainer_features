@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This test file will be executed against an auto-generated devcontainer.json that
+# Thi# For the 'setup-git-hooks' feature, that means autoSetup is "/workspaces", hooksDir is 'git/hooks', test file will be executed against an auto-generated devcontainer.json that
 # includes the 'setup-git-hooks' Feature with no options.
 #
 # For more information, see: https://github.com/devcontainers/cli/blob/main/docs/features/test.md
@@ -16,7 +16,7 @@
 #
 # Thus, the value of all options will fall back to the default value in the
 # Feature's 'devcontainer-feature.json'.
-# For the 'setup-git-hooks' feature, that means autoSetup is true, hooksDir is 'git/hooks',
+# For the 'setup-git-hooks' feature, that means autoSetup is "['/workspaces']", hooksDir is 'git/hooks',
 # verbose is false, and gitSafeDirectory is '/workspaces/*'.
 #
 # These scripts are run as 'root' by default. Although that can be changed

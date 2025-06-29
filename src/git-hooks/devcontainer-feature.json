@@ -14,9 +14,9 @@
             "description": "Directory containing git hooks relative to workspace root"
         },
         "autoSetup": {
-            "type": "boolean",
-            "default": true,
-            "description": "Automatically set up git hooks after container creation"
+            "type": "string",
+            "default": "/workspaces",
+            "description": "Space-separated list of paths containing git repositories for automatic hook setup. Set to empty string to disable auto-setup."
         },
         "verbose": {
             "type": "boolean",
@@ -34,5 +34,5 @@
             "extensions": []
         }
     },
-    "postCreateCommand": "if [ \"${AUTOSETUP}\" = \"true\" ]; then cd $GIT_ROOT; setup-git-hooks; fi"
+    "postCreateCommand": "if [ -n \"${AUTOSETUP}\" ]; then for path in ${AUTOSETUP}; do if [ -d \"$path\" ]; then echo \"Setting up git hooks for: $path\"; (cd \"$path\" && setup-git-hooks) || echo \"Failed to setup hooks in $path\"; fi; done; fi"
 }
