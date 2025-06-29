@@ -1,0 +1,226 @@
+#!/bin/bash
+
+# Git hooks setup script with argbash
+# This script installs the project's git hooks with enhanced options
+
+# Source the argument parsing logic
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FEATURE_LIB_DIR="${FEATURE_LIB_DIR:-"/usr/local/lib/features"}"
+FEATURE_LIB_BASH_DIR="${FEATURE_LIB_BASH_DIR:-"${FEATURE_LIB_DIR}/git-hooks/bash"}"
+ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"${FEATURE_LIB_BASH_DIR}/args"}"
+source "$ARGBASH_ARGS_DIR/setup-git-hooks-parsing.sh"
+source "$FEATURE_LIB_BASH_DIR/common.include.sh"
+
+# Array of all possible git client-side hook script names
+GIT_CLIENT_HOOKS=(
+    "applypatch-msg"
+    "pre-applypatch"
+    "post-applypatch"
+    "pre-commit"
+    "pre-merge-commit"
+    "prepare-commit-msg"
+    "commit-msg"
+    "post-commit"
+    "pre-rebase"
+    "post-checkout"
+    "post-merge"
+    "pre-push"
+    "pre-receive"
+    "update"
+    "post-receive"
+    "post-update"
+    "push-to-checkout"
+    "pre-auto-gc"
+    "post-rewrite"
+    "sendemail-validate"
+    "fsmonitor-watchman"
+    "p4-changelist"
+    "p4-prepare-changelist"
+    "p4-post-changelist"
+    "p4-pre-submit"
+    "post-index-change"
+)
+
+# Set git hooks directory path
+GIT_HOOKS_DIR="$_arg_repo_dir/.git/hooks"
+
+# Verbose output function
+verbose() {
+    if [ "$_arg_verbose" = "on" ]; then
+        echo "🔍 [VERBOSE] $*"
+    fi
+}
+
+# Dry run output function
+dry_run_msg() {
+    if [ "$_arg_dry_run" = "on" ]; then
+        echo "🧪 [DRY RUN] Would $*"
+    else
+        echo "🔧 $*"
+    fi
+}
+
+# List all possible git client-side hooks
+list_hook_types() {
+    echo "📋 All possible git client-side hook types:"
+    for hook_type in "${GIT_CLIENT_HOOKS[@]}"; do
+        echo "  - $hook_type"
+    done
+    echo ""
+    echo "Total: ${#GIT_CLIENT_HOOKS[@]} hook types"
+}
+
+# Clean installed hooks
+clean_hooks() {
+    echo "🧹 Cleaning installed git hooks..."
+
+    if [ ! -d "$GIT_HOOKS_DIR" ]; then
+        echo "ℹ️  Git hooks directory $GIT_HOOKS_DIR does not exist"
+        return 0
+    fi
+
+    # Find and remove symlinks pointing to run-git-client-hooks
+    removed_count=0
+    run_git_client_hooks_path="$(which run-git-client-hooks 2>/dev/null)"
+    
+    if [ -z "$run_git_client_hooks_path" ]; then
+        verbose "run-git-client-hooks not found in PATH, checking all symlinks"
+    fi
+
+    for hook_type in "${GIT_CLIENT_HOOKS[@]}"; do
+        hook_path="$GIT_HOOKS_DIR/$hook_type"
+        if [ -L "$hook_path" ]; then
+            link_target="$(readlink "$hook_path")"
+            # Check if it's pointing to run-git-client-hooks (by name or full path)
+            if [[ "$link_target" == *"run-git-client-hooks"* ]] || [[ "$link_target" == "$run_git_client_hooks_path" ]]; then
+                dry_run_msg "remove $hook_type hook symlink"
+                if [ "$_arg_dry_run" = "off" ]; then
+                    rm "$hook_path"
+                    verbose "Removed $hook_type hook symlink"
+                fi
+                removed_count=$((removed_count + 1))
+            fi
+        fi
+    done
+
+    if [ $removed_count -eq 0 ]; then
+        echo "ℹ️  No git hooks symlinks found to remove"
+    else
+        if [ "$_arg_dry_run" = "on" ]; then
+            echo "🧪 [DRY RUN] Would remove $removed_count hook symlink(s)"
+        else
+            echo "✅ Removed $removed_count hook symlink(s)"
+        fi
+    fi
+}
+
+# Main setup function
+setup_hooks() {
+    verbose "Git root: $_arg_repo_dir"
+    verbose "Git hooks directory: $GIT_HOOKS_DIR"
+
+    echo "🔧 Setting up git hooks..."
+
+    # Check if we're in a git repository
+    if [ ! -d "$_arg_repo_dir/.git" ]; then
+        echo "⚠️  Warning: Not in a git repository root directory (current directory: $(pwd))"
+        echo "💡 Continuing anyway - hooks will be set up but may not function until in a git repository"
+    fi
+
+    # Get path to run-git-client-hooks
+    run_git_client_hooks_path="$(which run-git-client-hooks)"
+    if [ ! -f "$run_git_client_hooks_path" ]; then
+        echo "❌ Error: run-git-client-hooks script not found in PATH"
+        exit 1
+    fi
+
+    verbose "run-git-client-hooks path: $run_git_client_hooks_path"
+
+    # Create .git/hooks directory if it doesn't exist
+    if [ "$_arg_dry_run" = "on" ]; then
+        echo "🧪 [DRY RUN] Would create directory: $GIT_HOOKS_DIR"
+    else
+        mkdir -p "$GIT_HOOKS_DIR"
+        verbose "Created git hooks directory: $GIT_HOOKS_DIR"
+    fi
+
+    echo "🔗 Creating symlinks for all git client-side hooks to run-git-client-hooks"
+
+    hooks_installed=0
+
+    # Create symlinks for ALL possible git client hooks
+    for hook_type in "${GIT_CLIENT_HOOKS[@]}"; do
+        hook_path="$GIT_HOOKS_DIR/$hook_type"
+
+        # Check if hook already exists and handle accordingly
+        if [ -e "$hook_path" ] || [ -L "$hook_path" ]; then
+            if [ "$_arg_force" = "on" ]; then
+                dry_run_msg "remove existing $hook_type hook"
+                if [ "$_arg_dry_run" = "off" ]; then
+                    rm "$hook_path"
+                fi
+            else
+                echo "⚠️  $hook_type hook already exists at $hook_path"
+                echo "    Use --force to overwrite or --clean to remove all hooks first"
+                continue
+            fi
+        fi
+
+        dry_run_msg "link $hook_type hook to run-git-client-hooks"
+        if [ "$_arg_dry_run" = "off" ]; then
+            ln -s "$run_git_client_hooks_path" "$hook_path"
+            verbose "Created symlink: $hook_path -> $run_git_client_hooks_path"
+        fi
+
+        hooks_installed=$((hooks_installed + 1))
+    done
+
+    # Report results
+    if [ "$_arg_dry_run" = "on" ]; then
+        echo "🧪 [DRY RUN] Would install $hooks_installed git hook symlink(s)"
+        return 0
+    fi
+
+    if [ $hooks_installed -eq 0 ]; then
+        echo "⚠️  No hooks were installed"
+    else
+        echo "✅ Successfully installed $hooks_installed git hook symlink(s)"
+    fi
+
+    echo ""
+    echo "🎉 Git hooks setup complete!"
+    echo ""
+    echo "All git client-side hooks are now linked to run-git-client-hooks:"
+    echo "  Installed hooks: $hooks_installed/${#GIT_CLIENT_HOOKS[@]}"
+    
+    if [ "$_arg_verbose" = "on" ]; then
+        echo ""
+        echo "  Individual hooks:"
+        for hook_type in "${GIT_CLIENT_HOOKS[@]}"; do
+            if [ -L "$GIT_HOOKS_DIR/$hook_type" ]; then
+                echo "    ✓ $hook_type"
+            fi
+        done
+    else
+        echo "    Use --verbose to see individual hook names"
+    fi
+    
+    echo ""
+    echo "💡 All hooks are symlinked to run-git-client-hooks"
+    echo "To disable a specific hook, remove the symlink in .git/hooks/"
+    echo "To clean all hooks, run this script with --clean"
+}
+
+# Main execution
+if [ "$_arg_list" = "on" ]; then
+    list_hook_types
+    exit_code=$?
+    exit $exit_code
+fi
+
+if [ "$_arg_clean" = "on" ]; then
+    clean_hooks
+    exit 0
+fi
+
+setup_hooks

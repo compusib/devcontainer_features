@@ -1,0 +1,132 @@
+{
+    "basic_setup": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "autoSetup": "/workspace/git_test"
+            }
+        }
+    },
+    "custom_configuration": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "hooksDir": "custom/hooks/path",
+                "autoSetup": "/workspace/git_test",
+                "verbose": true,
+                "gitSafeDirectory": "/workspaces/*"
+            }
+        }
+    },
+    "manual_setup_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "autoSetup": ""
+            }
+        }
+    },
+    "with_custom_env": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "git-hooks": {
+                "hooksDir": "tools/git-hooks",
+                "verbose": true,
+                "autoSetup": "/workspace/git_test"
+            }
+        },
+        "containerEnv": {
+            "GIT_HOOKS_CUSTOM_VAR": "value",
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        }
+    },
+    "minimal_with_focal": {
+        "image": "mcr.microsoft.com/devcontainers/base:focal",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "ghcr.io/devcontainers/features/common-utils:1": {
+                "installZsh": false,
+                "installOhMyZsh": false,
+                "upgradePackages": false,
+                "username": "octocat"
+            },
+            "git-hooks": {
+                "verbose": false,
+                "autoSetup": "/workspace/git_test"
+            }
+        },
+        "remoteUser": "octocat"
+    },
+    "no_auto_setup_verbose": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "GIT_ROOT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "autoSetup": "",
+                "verbose": true,
+                "hooksDir": "project-hooks"
+            }
+        }
+    },
+    "empty_git_safe_directory": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "GIT_ROOT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "gitSafeDirectory": "",
+                "autoSetup": "/workspace/git_test"
+            }
+        }
+    },
+    "hook_fails_commit": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true,
+                "autoSetup": "/workspace/git_test"
+            }
+        }
+    },
+    "hook_succeeds_commit": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true,
+                "autoSetup": "/workspace/git_test"
+            }
+        }
+    },
+    "one_failing_hook_commit_fails": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "containerEnv": {
+            "CREATE_TEST_GIT": "/workspace/git_test"
+        },
+        "features": {
+            "git-hooks": {
+                "verbose": true,
+                "autoSetup": "/workspace/git_test"
+            }
+        }
+    }
+}

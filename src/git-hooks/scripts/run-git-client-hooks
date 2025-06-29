@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# General git client hook dispatcher
+# Executes all hooks in <hook-name>.d/ directory based on how it was invoked
+
+set -e  # Exit on first error
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FEATURE_LIB_DIR="${FEATURE_LIB_DIR:-"/usr/local/lib/features"}"
+FEATURE_LIB_BASH_DIR="${FEATURE_LIB_BASH_DIR:-"${FEATURE_LIB_DIR}/git-hooks/bash"}"
+# ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"${FEATURE_LIB_BASH_DIR}/args"}"
+#source "$ARGBASH_ARGS_DIR/setup-git-hooks-parsing.sh"
+source "$FEATURE_LIB_BASH_DIR/common.include.sh"
+
+
+# Get the git repository root
+GIT_ROOT=$(get_git_root .)
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Not in a git repository"
+    exit 1
+fi
+
+# Get the name this script was called with (the symlink name)
+HOOK_NAME="$(basename "$0")"
+
+# Look for hooks in the standard git/hooks directory
+HOOKS_DIR="$GIT_ROOT/git/hooks/${HOOK_NAME}.d"
+
+echo "🚀 Running $HOOK_NAME hooks..."
+
+# Check if hooks directory exists
+if [ ! -d "$HOOKS_DIR" ]; then
+    echo "ℹ️  No ${HOOK_NAME}.d directory found, skipping hook execution"
+    exit 0
+fi
+
+# Get all executable files in hooks directory, sorted numerically by filename
+hooks=($(find "$HOOKS_DIR" -type f -executable | sort -V))
+
+if [ ${#hooks[@]} -eq 0 ]; then
+    echo "ℹ️  No executable hooks found in ${HOOK_NAME}.d/"
+    exit 0
+fi
+
+echo "📋 Found ${#hooks[@]} $HOOK_NAME hook(s) to execute:"
+for hook in "${hooks[@]}"; do
+    echo "  - $(basename "$hook")"
+done
+echo ""
+
+# Execute each hook
+hook_count=0
+failed_hooks=0
+
+for hook in "${hooks[@]}"; do
+    hook_name=$(basename "$hook")
+    hook_count=$((hook_count + 1))
+    
+    echo "[$hook_count/${#hooks[@]}] Executing $hook_name..."
+    
+    # Execute the hook with all arguments passed to this script
+    if "$hook" "$@"; then
+        echo "✅ $hook_name completed successfully"
+    else
+        exit_code=$?
+        echo "❌ $hook_name failed with exit code $exit_code"
+        failed_hooks=$((failed_hooks + 1))
+        exit $exit_code  # Exit immediately on first failure
+    fi
+    
+    echo ""
+done
+
+# Summary
+if [ $failed_hooks -eq 0 ]; then
+    echo "🎉 All $HOOK_NAME hooks completed successfully!"
+else
+    echo "❌ $failed_hooks $HOOK_NAME hook(s) failed"
+    exit 1
+fi
+
+exit 0
