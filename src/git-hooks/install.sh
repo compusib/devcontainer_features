@@ -49,6 +49,7 @@ if [ -n "$AUTOSETUP" ]; then
   else
       #bashrc not installed
       echo "$ENV_CMD" >> "$_REMOTE_USER_HOME/.bashrc"
+  fi
 fi
 
 
