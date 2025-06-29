@@ -40,6 +40,7 @@ jobs:
           - hello
           - bashrc
           - argbash
+          - git-hooks
     steps:
       - uses: actions/checkout@v4
 
