@@ -18,7 +18,6 @@
 
 # Setting environmental variables
 
-
 die()
 {
 	local _ret="${2:-1}"

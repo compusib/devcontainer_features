@@ -44,7 +44,10 @@ source dev-container-features-test-lib
 
 check "setup-git-hooks command is available" which setup-git-hooks
 
-check "setup-git-hooks can show help" setup-git-hooks --help
+check "setup-git-hooks can show help" bash -c "
+  echo $(which setup-git-hooks) &&
+  setup-git-hooks --help
+  "
 
 check "git is available" which git
 

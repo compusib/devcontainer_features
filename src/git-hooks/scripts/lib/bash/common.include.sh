@@ -5,7 +5,7 @@ get_git_root() {
     
     # If we're inside a .git directory, move up until we're outside it
     while [[ "$search_dir" == *"/.git"* ]] && [ "$search_dir" != "/" ]; do
-        search_dir="$(dirname "$search_dir")"
+        search_dir="$(realpath "$search_dir"/..)"
     done
     
     # First try git rev-parse --show-toplevel if git is available and we're not in .git
@@ -19,12 +19,12 @@ get_git_root() {
     fi
     
     # Fallback: search for .git directory in parent paths
-    while [ "$search_dir" != "/" ]; do
+    while [ -n "$search_dir" ] && [ "$search_dir" != "/" ]; do
         if [ -d "$search_dir/.git" ] || [ -f "$search_dir/.git" ]; then
             echo "$search_dir"
             return 0
         fi
-        search_dir="$(dirname "$search_dir")"
+        search_dir="$(realpath "$search_dir"/..)"
     done
     
     # No git repository found

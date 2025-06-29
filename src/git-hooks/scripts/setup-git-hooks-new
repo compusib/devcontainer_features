@@ -8,9 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FEATURE_LIB_DIR="${FEATURE_LIB_DIR:-"/usr/local/lib/features"}"
 FEATURE_LIB_BASH_DIR="${FEATURE_LIB_BASH_DIR:-"${FEATURE_LIB_DIR}/git-hooks/bash"}"
 ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"${FEATURE_LIB_BASH_DIR}/args"}"
-source "$FEATURE_LIB_BASH_DIR/common.include.sh"
 source "$ARGBASH_ARGS_DIR/setup-git-hooks-parsing.sh"
-
+source "$FEATURE_LIB_BASH_DIR/common.include.sh"
 
 # Array of all possible git client-side hook script names
 GIT_CLIENT_HOOKS=(
@@ -44,7 +43,6 @@ GIT_CLIENT_HOOKS=(
 
 # Set git hooks directory path
 GIT_HOOKS_DIR="$_arg_repo_dir/.git/hooks"
-HOOKS_SOURCE_DIR="$_arg_repo_dir/$_arg_hooks_dir"
 
 # Verbose output function
 verbose() {
@@ -70,66 +68,6 @@ list_hook_types() {
     done
     echo ""
     echo "Total: ${#GIT_CLIENT_HOOKS[@]} hook types"
-    
-    echo ""
-    echo "📁 Custom hook implementations in $HOOKS_SOURCE_DIR:"
-    
-    if [ ! -d "$HOOKS_SOURCE_DIR" ]; then
-        echo "  ⚠️  Source directory not found at $HOOKS_SOURCE_DIR"
-        echo "  💡 Create this directory and add <hook-type>.d subdirectories for custom implementations"
-        return 0
-    fi
-    
-    # Find all .d directories
-    hook_dirs=($(find "$HOOKS_SOURCE_DIR" -maxdepth 1 -type d -name "*.d" 2>/dev/null | sort))
-    
-    if [ ${#hook_dirs[@]} -eq 0 ]; then
-        echo "  📂 $HOOKS_SOURCE_DIR/"
-        echo "    └── (no *.d directories found)"
-        echo ""
-        echo "  💡 To add custom hooks, create directories like:"
-        echo "     $HOOKS_SOURCE_DIR/pre-commit.d/"
-        echo "     $HOOKS_SOURCE_DIR/pre-push.d/"
-        return 0
-    fi
-    
-    echo "  📂 $HOOKS_SOURCE_DIR/"
-    
-    for ((i=0; i<${#hook_dirs[@]}; i++)); do
-        hook_dir="${hook_dirs[i]}"
-        hook_type=$(basename "$hook_dir" .d)
-        
-        # Determine tree connector
-        if [ $i -eq $((${#hook_dirs[@]} - 1)) ]; then
-            tree_prefix="  └── "
-            sub_tree_prefix="      "
-        else
-            tree_prefix="  ├── "
-            sub_tree_prefix="  │   "
-        fi
-        
-        # Count executable files in the directory
-        executable_hooks=($(find "$hook_dir" -maxdepth 1 -type f -executable 2>/dev/null | sort -V))
-        hook_count=${#executable_hooks[@]}
-        
-        echo "${tree_prefix}📁 ${hook_type}.d/ ($hook_count executable hook(s))"
-        
-        # Show individual hooks if verbose or if there are hooks
-        if [ $hook_count -gt 0 ]; then
-            for ((j=0; j<${#executable_hooks[@]}; j++)); do
-                hook_file="${executable_hooks[j]}"
-                hook_name=$(basename "$hook_file")
-                
-                if [ $j -eq $((${#executable_hooks[@]} - 1)) ]; then
-                    echo "${sub_tree_prefix}└── 🔧 $hook_name"
-                else
-                    echo "${sub_tree_prefix}├── 🔧 $hook_name"
-                fi
-            done
-        else
-            echo "${sub_tree_prefix}└── (no executable files)"
-        fi
-    done
 }
 
 # Clean installed hooks
