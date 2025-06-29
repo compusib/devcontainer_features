@@ -5,7 +5,7 @@ This devcontainer feature installs the `setup-git-hooks` script system-wide, mak
 ## What it installs
 
 - **Main script**: `/usr/local/bin/setup-git-hooks` - The main executable script
-- **Library**: `/usr/local/lib/features/git-hooks` - Contains a common bash include linbrart, argument parsing logic and it's templates
+- **Library**: `/usr/local/lib/features/git-hooks` - Contains a common bash include library, argument parsing logic and its templates
 - **Git configuration**: Configures git safe.directory to prevent "unsafe repository" warnings
 
 ## Configuration Options
