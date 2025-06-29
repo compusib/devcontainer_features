@@ -5,10 +5,12 @@
 
 # Source the argument parsing logic
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"/usr/local/lib/argbash"}"
+FEATURE_LIB_DIR="${FEATURE_LIB_DIR:-"/usr/local/lib/features"}"
+FEATURE_LIB_BASH_DIR="${FEATURE_LIB_BASH_DIR:-"${FEATURE_LIB_DIR}/git-hooks/bash"}"
+ARGBASH_ARGS_DIR="${ARGBASH_ARGS_DIR:-"${FEATURE_LIB_BASH_DIR}/args"}"
 source "$ARGBASH_ARGS_DIR/setup-git-hooks-parsing.sh"
+source "$FEATURE_LIB_BASH_DIR/common.include.sh"
 
-# Function to find git root directory
 
 
 

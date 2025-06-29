@@ -4,7 +4,7 @@ main_scripts_to_install=(
     "setup-git-hooks"
     "run-git-client-hooks"
 )
-
+FEATURE_LIB_TARGET_DIR="${FEATURE_LIB_DIR:-"/usr/local/lib/features"}"
 set -e
 
 echo "Installing setup-git-hooks feature..."
@@ -34,14 +34,13 @@ for script in "${main_scripts_to_install[@]}"; do
         echo "⚠️  Script ${script} not found in ${FEATURE_DIR}/scripts/"
     fi
 done
-
-# Install argbash library to /usr/local/lib/argbash
-echo "📦 Installing argbash library to /usr/local/lib/argbash/"
-mkdir -p /usr/local/lib/argbash
-cp -r "${FEATURE_DIR}/scripts/args/"* /usr/local/lib/argbash/
+# Install argbash library to FEATURE_LIB_TARGET_DIR
+echo "📦 Installing argbash library to ${FEATURE_LIB_TARGET_DIR}"
+mkdir -p "${FEATURE_LIB_TARGET_DIR}"
+cp -r ${FEATURE_DIR}/scripts/lib "${FEATURE_LIB_TARGET_DIR}/git-hooks"
 
 # Make the parsing script executable
-chmod +x /usr/local/lib/argbash/setup-git-hooks-parsing.sh
+chmod +x ${FEATURE_LIB_TARGET_DIR}/git-hooks/bash/args/*.sh
 
 echo "✅ setup-git-hooks feature installed successfully!"
 echo ""
