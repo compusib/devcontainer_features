@@ -1,6 +1,6 @@
 {
     "id": "git-hooks",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "name": "Git Hooks Setup",
     "description": "Installs and configures modular git hooks system with argbash-enhanced setup script",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/git-hooks/README.md",
