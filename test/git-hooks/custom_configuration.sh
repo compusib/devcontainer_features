@@ -18,12 +18,12 @@ check "can use custom hooks directory" bash -c "
     echo '#!/bin/bash' > custom/hooks/path/pre-commit && 
     setup-git-hooks --hooks-dir custom/hooks/path --verbose
 "
-check "has param HOOKS_DIR set" bash -c "
-    [[ -n \"\$HOOKS_DIR\" ]] && echo 'HOOKS_DIR is set' || {
-    echo 'HOOKS_DIR is not set'
+check "has param GIT_HOOKS_DIR set" bash -c "
+    [[ -n \"\$GIT_HOOKS_DIR\" ]] && echo 'GIT_HOOKS_DIR is set' || {
+    echo 'GIT_HOOKS_DIR is not set'
     exit 1
     }
-    echo 'HOOKS_DIR is set correctly'
+    echo 'GIT_HOOKS_DIR is set correctly'
 "
 bash
 
