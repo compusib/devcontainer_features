@@ -19,7 +19,7 @@ Installs and configures modular git hooks system with argbash-enhanced setup scr
 | hooksDir | Directory containing git hooks relative to workspace root | string | git/hooks |
 | autoSetup | Space-separated list of paths containing git repositories for automatic hook setup. Set to empty string to disable auto-setup. | string | /workspaces |
 | verbose | Enable verbose output during setup | boolean | false |
-| gitSafeDirectory | Git safe.directory pattern to configure (supports wildcards). Set to empty string to skip configuration. | string | /workspaces/* |
+| gitSafeDirectories | Git safe.directory pattern to configure (supports wildcards). Set to empty string to skip configuration, multiple values may be supplied space-separated | string | /workspaces/* |
 
 # Setup Git Hooks Feature
 
