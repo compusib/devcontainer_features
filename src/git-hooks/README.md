@@ -15,6 +15,7 @@ Installs and configures modular git hooks system with argbash-enhanced setup scr
 
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
+| bashRcDFileName | Filename for the bashrc.d script that sets up the git hooks environment | string | 30-git-hooks.sh |
 | hooksDir | Directory containing git hooks relative to workspace root | string | git/hooks |
 | autoSetup | Space-separated list of paths containing git repositories for automatic hook setup. Set to empty string to disable auto-setup. | string | /workspaces |
 | verbose | Enable verbose output during setup | boolean | false |
