@@ -16,6 +16,7 @@
             "CREATE_TEST_GIT": "/workspace/git_test"
         },
         "features": {
+            "bashrc": {},
             "git-hooks": {
                 "hooksDir": "custom/hooks/path",
                 "autoSetup": "/workspace/git_test",

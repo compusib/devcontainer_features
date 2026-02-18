@@ -38,20 +38,29 @@ done
 echo "📦 Installing argbash library to ${FEATURE_LIB_TARGET_DIR}"
 mkdir -p "${FEATURE_LIB_TARGET_DIR}"
 cp -r ${FEATURE_DIR}/scripts/lib "${FEATURE_LIB_TARGET_DIR}/git-hooks"
+BASHRCDFILENAME="${BASHRCDFILENAME:-30-git-hooks.sh}"
+function write_env_vars_to_bashrc() {
+    local var_name="$1"
+    local var_value="$2"
+    if [ -d "$_REMOTE_USER_HOME/.bashrc.d"] ; then
+        echo "🔧 Writing ${var_name} to .bashrc.d/${BASHRCDFILENAME}"
+        # bashrc.d exists, write to a new file
+        if [ -f "$_REMOTE_USER_HOME/.bashrc.d/${BASHRCDFILENAME}" ]; then
+            echo "export ${var_name}=\"${var_value}\"" >> "$_REMOTE_USER_HOME/.bashrc.d/${BASHRCDFILENAME}"
+        else
+            echo "export ${var_name}=\"${var_value}\"" > "$_REMOTE_USER_HOME/.bashrc.d/${BASHRCDFILENAME}"
+            chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/${BASHRCDFILENAME}"
+        fi
+    else
+        echo "🔧 ${_REMOTE_USER_HOME}/.bashrc.d not found, appending ${var_name} to .bashrc"
+        # bashrc.d does not exist, append to .bashrc
+        echo "export ${var_name}=\"${var_value}\"" >> "$_REMOTE_USER_HOME/.bashrc"
+    fi
+}
 
-if [ -n "$AUTOSETUP" ]; then
-  echo "🔧 Auto-setup enabled, setting the AUTOSETUP ENV var"
-  ENV_CMD="export AUTOSETUP=\"$AUTOSETUP\""
-  if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then 
-      #bashrc installed
-      echo "$ENV_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/30_git_hooks_feature.sh"
-      chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/30_git_hooks_feature.sh"
-  else
-      #bashrc not installed
-      echo "$ENV_CMD" >> "$_REMOTE_USER_HOME/.bashrc"
-  fi
-fi
-
+[[ -n "$AUTOSETUP" ]] && write_env_vars_to_bashrc "AUTOSETUP" "${AUTOSETUP}"
+[[ -n "$HOOKSDIR" ]] && write_env_vars_to_bashrc "GIT_HOOKS_DIR" "${HOOKSDIR}"
+[[ -n "$GIT_SAFE_DIRECTORY" ]] && write_env_vars_to_bashrc "GIT_SAFE_DIRECTORY" "$GIT_SAFE_DIRECTORY"
 
 # Make the parsing script executable
 chmod +x ${FEATURE_LIB_TARGET_DIR}/git-hooks/bash/args/*.sh

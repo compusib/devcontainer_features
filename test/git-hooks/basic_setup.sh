@@ -22,4 +22,5 @@ check "basic git hooks setup works" bash -c "
     setup-git-hooks
 "
 
+
 reportResults

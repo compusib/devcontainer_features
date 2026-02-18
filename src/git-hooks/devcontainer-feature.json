@@ -7,7 +7,17 @@
     "dependsOn": {
         "ghcr.io/devcontainers/features/git": {}
     },
+    "installsAfter": [
+        "ghcr.io/compusib/devcontainer_features/bashrc",
+        "./bashrc"
+    ],
+
     "options": {
+        "bashRcDFileName": {
+            "type": "string",
+            "default": "30-git-hooks.sh",
+            "description": "Filename for the bashrc.d script that sets up the git hooks environment"
+        },
         "hooksDir": {
             "type": "string",
             "default": "git/hooks",
