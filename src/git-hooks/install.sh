@@ -10,12 +10,14 @@ set -e
 echo "Installing setup-git-hooks feature..."
 
 # Get feature options (passed as environment variables by devcontainer)
-GIT_SAFE_DIRECTORY="${GITSAFEDIRECTORY:-/workspaces/*}"
+GIT_SAFE_DIRECTORY="${GITSAFEDIRECTORIES:-/workspaces/*}"
 
 # Configure git safe directory if specified
-if [[ -n "$GIT_SAFE_DIRECTORY" ]]; then
-    echo "🔧 Configuring git safe directory: $GIT_SAFE_DIRECTORY"
-    git config --global --add safe.directory "$GIT_SAFE_DIRECTORY"
+if [[ -n "$GIT_SAFE_DIRECTORIES" ]]; then
+    for GIT_SAFE_DIRECTORY in  $GIT_SAFE_DIRECTORIES; do
+        echo "🔧 Configuring git safe directory: $GIT_SAFE_DIRECTORY"
+        git config --global --add safe.directory "$GIT_SAFE_DIRECTORY"
+    done
 else
     echo "⚠️  Skipping git safe directory configuration (empty value provided)"
 fi
@@ -60,7 +62,7 @@ function write_env_vars_to_bashrc() {
 
 [[ -n "$AUTOSETUP" ]] && write_env_vars_to_bashrc "AUTOSETUP" "${AUTOSETUP}"
 [[ -n "$HOOKSDIR" ]] && write_env_vars_to_bashrc "GIT_HOOKS_DIR" "${HOOKSDIR}"
-[[ -n "$GIT_SAFE_DIRECTORY" ]] && write_env_vars_to_bashrc "GIT_SAFE_DIRECTORY" "$GIT_SAFE_DIRECTORY"
+[[ -n "$GIT_SAFE_DIRECTORIES" ]] && write_env_vars_to_bashrc "GIT_SAFE_DIRECTORIES" "$GIT_SAFE_DIRECTORIES"
 
 # Make the parsing script executable
 chmod +x ${FEATURE_LIB_TARGET_DIR}/git-hooks/bash/args/*.sh

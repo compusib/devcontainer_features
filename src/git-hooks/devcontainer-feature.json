@@ -33,10 +33,10 @@
             "default": false,
             "description": "Enable verbose output during setup"
         },
-        "gitSafeDirectory": {
+        "gitSafeDirectories": {
             "type": "string",
             "default": "/workspaces/*",
-            "description": "Git safe.directory pattern to configure (supports wildcards). Set to empty string to skip configuration."
+            "description": "Git safe.directory pattern to configure (supports wildcards). Set to empty string to skip configuration, multiple values may be supplied space-separated"
         }
     },
     "customizations": {

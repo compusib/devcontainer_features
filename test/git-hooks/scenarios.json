@@ -21,7 +21,7 @@
                 "hooksDir": "custom/hooks/path",
                 "autoSetup": "/workspace/git_test",
                 "verbose": true,
-                "gitSafeDirectory": "/workspaces/*"
+                "gitSafeDirectories": "/workspaces/*"
             }
         }
     },
@@ -89,7 +89,7 @@
         },
         "features": {
             "git-hooks": {
-                "gitSafeDirectory": "",
+                "gitSafeDirectories": "",
                 "autoSetup": "/workspace/git_test"
             }
         }
