@@ -42,7 +42,7 @@ BASHRCDFILENAME="${BASHRCDFILENAME:-30-git-hooks.sh}"
 function write_env_vars_to_bashrc() {
     local var_name="$1"
     local var_value="$2"
-    if [ -d "$_REMOTE_USER_HOME/.bashrc.d"] ; then
+    if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then
         echo "🔧 Writing ${var_name} to .bashrc.d/${BASHRCDFILENAME}"
         # bashrc.d exists, write to a new file
         if [ -f "$_REMOTE_USER_HOME/.bashrc.d/${BASHRCDFILENAME}" ]; then
