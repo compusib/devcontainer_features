@@ -25,6 +25,10 @@
         "ghcr.io/compusib/devcontainer_features/argbash:0": {},
         "ghcr.io/compusib/devcontainer_features/starship:latest": {}
     },
+    "containerEnv": {
+        "GIT_AUTHOR_NAME": "${localEnv:GIT_AUTHOR_NAME}",
+		"GIT_AUTHOR_EMAIL": "${localEnv:GIT_AUTHOR_EMAIL}"
+    },
     "remoteUser": "node",
     "updateContentCommand": "npm install -g @devcontainers/cli",
     "mounts": [
