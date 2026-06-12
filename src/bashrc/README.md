@@ -18,6 +18,7 @@ set startup options
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
 | pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| compusibBashRepoRoot | Path to the compusib bash repo checkout. Exported as BASH_REPO_ROOT via ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh, and if <path>/bin/bashrc exists it is run as `bin/bashrc enable --all` during postAttachCommand. | string | /workspace/compusib/bash |
 
 ## bashrc feature
 
@@ -61,6 +62,7 @@ set startup options
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
 | pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| compusibBashRepoRoot | Path to the compusib bash repo checkout. Exported as BASH_REPO_ROOT via ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh, and if <path>/bin/bashrc exists it is run as `bin/bashrc enable --all` during postAttachCommand. | string | /workspace/compusib/bash |
 #{Customizations}
 characters need to be escaped like so: `\\
 # bashrc (bashrc)
@@ -82,6 +84,7 @@ set startup options
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
 | pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| compusibBashRepoRoot | Path to the compusib bash repo checkout. Exported as BASH_REPO_ROOT via ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh, and if <path>/bin/bashrc exists it is run as `bin/bashrc enable --all` during postAttachCommand. | string | /workspace/compusib/bash |
 #{Customizations}
 .
 This is to prevent vscode from substituting the `
@@ -104,11 +107,18 @@ set startup options
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
 | pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| compusibBashRepoRoot | Path to the compusib bash repo checkout. Exported as BASH_REPO_ROOT via ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh, and if <path>/bin/bashrc exists it is run as `bin/bashrc enable --all` during postAttachCommand. | string | /workspace/compusib/bash |
 #{Customizations}
  variable, and for json to accept the slash which itself needs escaping to`\\`.
 `\\${CONTAINER_WORKSPACE_FOLDER}`  as an example refers to the mounted root of the container. 
 
 The path is mofied in the file `~/.bashrc.d/100_bash_path_append.sh` of the container user home.
+
+### `compusibBashRepoRoot` Option
+
+This points to the [compusib `bash`](https://github.com/compusib/bash) repository checkout, defaulting to `/workspace/compusib/bash`. Its value is exported as the `BASH_REPO_ROOT` environment variable via the file `~/.bashrc.d/005_BASH_REPO_ROOT_env.sh`.
+
+During `postAttachCommand` (so the mounted repo is available), if `<compusibBashRepoRoot>/bin/bashrc` exists and is executable, the feature runs `bin/bashrc enable --all` to link the repo's `~/.bashrc.d` fragments. When the path or script is absent the step is skipped without failing the hook.
 
 
 
