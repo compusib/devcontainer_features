@@ -1,5 +1,7 @@
 {
-    "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+    "dockerComposeFile": "compose.yml",
+    "service": "devcontainer-features-dev",
+    "workspaceFolder": "/workspaces/devcontainer_features",
     "customizations": {
         "vscode": {
             "settings": {

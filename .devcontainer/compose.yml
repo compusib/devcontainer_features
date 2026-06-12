@@ -1,0 +1,8 @@
+include:
+  - services/devcontainer-features-dev.yml
+name: "${STACK_NAME:-${DEV_STACK_NAME:-stack}}"
+networks:
+  stack:
+    name: "${STACK_NAME:-${DEV_STACK_NAME:-stack}}"
+  gateway:
+    external: true
