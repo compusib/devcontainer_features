@@ -1,5 +1,9 @@
 include:
-  - services/devcontainer-features-dev.yml
+  - devcontainer-features-dev.yml
+  - volumes/${COMPOSE_VOLUME_COMPUSIB:-noop}.yml
+  - volumes/${COMPOSE_VOLUME_CANTECORP:-noop}.yml
+  - volumes/${COMPOSE_VOLUME_COMBINED:-noop}.yml
+  - volumes/${COMPOSE_VOLUME_HOME:-noop}.yml
 name: "${STACK_NAME:-${DEV_STACK_NAME:-stack}}"
 networks:
   stack:

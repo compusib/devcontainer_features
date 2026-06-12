@@ -1,7 +1,7 @@
 {
     "dockerComposeFile": "compose.yml",
     "service": "devcontainer-features-dev",
-    "workspaceFolder": "/workspaces/devcontainer_features",
+    "workspaceFolder": "/workspace/compusib/devcontainer_features",
     "customizations": {
         "vscode": {
             "settings": {
@@ -17,23 +17,27 @@
             "extensions": [
                 "mads-hartmann.bash-ide-vscode",
                 "GitHub.vscode-pull-request-github",
-                "mhutchie.git-graph"
+                "mhutchie.git-graph",
+                "Anthropic.claude-code"
             ]
         }
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-        "ghcr.io/compusib/devcontainer_features/bashrc:0": {},
+        "ghcr.io/compusib/devcontainer_features/bashrc:0": {
+            // compusibBashRepoRoot defaults to /workspace/compusib/bash
+            // "compusibBashRepoRoot": "/workspace/compusib/bash"
+        },
         "ghcr.io/compusib/devcontainer_features/argbash:0": {},
         "ghcr.io/compusib/devcontainer_features/starship:latest": {}
     },
     "containerEnv": {
         "GIT_AUTHOR_NAME": "${localEnv:GIT_AUTHOR_NAME}",
-		"GIT_AUTHOR_EMAIL": "${localEnv:GIT_AUTHOR_EMAIL}"
+		"GIT_AUTHOR_EMAIL": "${localEnv:GIT_AUTHOR_EMAIL}",
+		"GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
+		// TEMPORARY: remove once the bashrc feature sets BASH_REPO_ROOT itself
+		"BASH_REPO_ROOT": "/workspace/compusib/bash"
     },
     "remoteUser": "node",
-    "updateContentCommand": "npm install -g @devcontainers/cli",
-    "mounts": [
-        "source=/data/workspace,target=/workspaces/all,type=bind"
-    ]
+    "updateContentCommand": "npm install -g @devcontainers/cli"
 }

@@ -1,0 +1,16 @@
+services:
+  devcontainer-features-dev:
+    image: mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm
+    command: sleep infinity
+    volumes:
+      # relative to this fragment's dir (<project>/.devcontainer); .. is the repo root
+      #- ..:/workspaces/devcontainer_features:cached
+      - type: volume
+        source: combined
+        target: /workspace/
+      - type: volume
+        source: host-home
+        target: /home/node/host-home
+    networks:
+      - stack
+      - gateway
