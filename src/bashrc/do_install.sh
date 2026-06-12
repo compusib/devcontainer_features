@@ -11,11 +11,15 @@ done
 EOBASHRC
 
 if [ $PATHAPPEND ]; then
-    echo "export PATH=\${PATH}:$PATHAPPEND" > ${_REMOTE_USER_HOME}/.bashrc.d/10_bash_path_append.sh
+    echo "export PATH=\${PATH}:$PATHAPPEND" > ${_REMOTE_USER_HOME}/.bashrc.d/100_bash_path_append.sh
 fi
 
 if [ $GITROOT ]; then
-    echo "export GIT_ROOT=$GITROOT" >  ${_REMOTE_USER_HOME}/.bashrc.d/01_GIT_ROOT_env.sh
+    echo "export GIT_ROOT=$GITROOT" >  ${_REMOTE_USER_HOME}/.bashrc.d/010_GIT_ROOT_env.sh
+fi
+
+if [ $COMPUSIBBASHREPOROOT ]; then
+    echo "export BASH_REPO_ROOT=$COMPUSIBBASHREPOROOT" > ${_REMOTE_USER_HOME}/.bashrc.d/005_BASH_REPO_ROOT_env.sh
 fi
 
 

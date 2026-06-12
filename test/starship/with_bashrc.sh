@@ -9,7 +9,7 @@ echo "USER ENVS:"
 #ls  ~/test
 
 check 'starship executable is installed' which starship | grep starship
-#check 'config file exists' ls ~/.bashrc.d/50_starship.sh
+#check 'config file exists' ls ~/.bashrc.d/500_starship.sh
 
 
 reportResults
