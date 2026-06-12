@@ -16,8 +16,8 @@ EOCMD
 if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then 
     #bashrc installed
     
-    echo "$SET_ETC_HOSTS_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/20_docker_host.sh"
-    chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/20_docker_host.sh"
+    echo "$SET_ETC_HOSTS_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/200_docker_host.sh"
+    chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/200_docker_host.sh"
 else
     #bashrc not installed
     echo "$SET_ETC_HOSTS_CMD" >> "$_REMOTE_USER_HOME/.bashrc"

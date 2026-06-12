@@ -16,12 +16,12 @@ START_CMD='eval $(starship init bash)'
 if [ -d "$_REMOTE_USER_HOME/.bashrc.d" ] ; then 
     #bashrc installed
     
-    echo "$ENV_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/50_starship.sh"
+    echo "$ENV_CMD" > "$_REMOTE_USER_HOME/.bashrc.d/500_starship.sh"
 
     if [ "$STARTFROMBASHRC" = "true" ]; then
-        echo "$START_CMD" >> "$_REMOTE_USER_HOME/.bashrc.d/50_starship.sh"
+        echo "$START_CMD" >> "$_REMOTE_USER_HOME/.bashrc.d/500_starship.sh"
     fi
-    chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/50_starship.sh"
+    chown $_REMOTE_USER "$_REMOTE_USER_HOME/.bashrc.d/500_starship.sh"
 else
     #bashrc not installed
     

@@ -50,25 +50,6 @@
             "CREATE_TEST_GIT": "/workspace/git_test"
         }
     },
-    "minimal_with_focal": {
-        "image": "mcr.microsoft.com/devcontainers/base:focal",
-        "containerEnv": {
-            "CREATE_TEST_GIT": "/workspace/git_test"
-        },
-        "features": {
-            "ghcr.io/devcontainers/features/common-utils:1": {
-                "installZsh": false,
-                "installOhMyZsh": false,
-                "upgradePackages": false,
-                "username": "octocat"
-            },
-            "git-hooks": {
-                "verbose": false,
-                "autoSetup": "/workspace/git_test"
-            }
-        },
-        "remoteUser": "octocat"
-    },
     "no_auto_setup_verbose": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "containerEnv": {

@@ -11,7 +11,7 @@ echo "USER ENVS:"
 check 'alias is found in /etc/hosts' grep customised-docker-host-alias /etc/hosts
 check 'alias ip is found in /etc/hosts' grep "$GATEWAY_IP " /etc/hosts
 
-#check 'config file exists' ls ~/.bashrc.d/50_starship.sh
+#check 'config file exists' ls ~/.bashrc.d/500_starship.sh
 
 
 reportResults

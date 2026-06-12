@@ -1,6 +1,6 @@
 {
     "id": "bashrc",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "name": "bashrc",
     "documentationURL": "https://github.com/compusib/devcontainer_features/src/bashrc/README.md",
     "description": "set startup options",
@@ -21,8 +21,13 @@
         "pathAppend": {
             "default": "\\$CONTAINER_WORKSPACE_FOLDER/scripts",
             "type": "string",
-            "description": "Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh"
+            "description": "Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh"
+        },
+        "compusibBashRepoRoot": {
+            "default": "/workspace/compusib/bash",
+            "type": "string",
+            "description": "Path to the compusib bash repo checkout. Exported as BASH_REPO_ROOT via ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh, and if <path>/bin/bashrc exists it is run as `bin/bashrc enable --all` during postAttachCommand."
         }
     },
-    "postAttachCommand": "bash -c \"[ ! -f ~/.bashrc.d/00_CONTAINER_WORKSPACE_FOLDER_env.sh ] && echo 'export CONTAINER_WORKSPACE_FOLDER=${containerWorkspaceFolder}' > ~/.bashrc.d/00_CONTAINER_WORKSPACE_FOLDER_env.sh\" || echo '~/.bashrc.d/00_CONTAINER_WORKSPACE_FOLDER_env.sh already exists'"
+    "postAttachCommand": "bash -c '[ -f ~/.bashrc.d/000_CONTAINER_WORKSPACE_FOLDER_env.sh ] || echo \"export CONTAINER_WORKSPACE_FOLDER=${containerWorkspaceFolder}\" > ~/.bashrc.d/000_CONTAINER_WORKSPACE_FOLDER_env.sh; . ~/.bashrc.d/005_BASH_REPO_ROOT_env.sh 2>/dev/null || true; { [ -x \"$BASH_REPO_ROOT/bin/bashrc\" ] && \"$BASH_REPO_ROOT/bin/bashrc\" enable --all; } || true'"
 }

@@ -1,6 +1,6 @@
 {
     "id": "docker-host-entry",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "name": "docker-host-entry",
     "documentationURL": "https://github.com/compusib/devcontainer_features/src/docker-host-entry/README.md",
     "description": "set startup options",

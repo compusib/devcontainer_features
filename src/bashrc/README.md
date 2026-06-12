@@ -17,7 +17,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 
 ## bashrc feature
 
@@ -28,7 +28,7 @@ Adds customizations included from  `~/.bashrc.d` directory.
 This feature creates the `~/.bashrc.d` and then adds a snippet in .bashrc to **dot-include** any files 
 with the `sh` extension from that directory (i.e. all `. ~/.bashrc.d/*.sh` files)
 
-The `bashrc` also adds the `containerWorkspaceFolder` setting from `devcontainer.json` as the environment variable `CONTAINER_WORKSPACE_FOLDER`, by creating the file `~/.bashrc.d/00_CONTAINER_WORKSPACE_FOLDER_env.sh`.
+The `bashrc` also adds the `containerWorkspaceFolder` setting from `devcontainer.json` as the environment variable `CONTAINER_WORKSPACE_FOLDER`, by creating the file `~/.bashrc.d/000_CONTAINER_WORKSPACE_FOLDER_env.sh`.
 
 Files in `~/.bashrc.d/` are included into `~/.bashrc` in **alphabetical** order.
 
@@ -37,7 +37,7 @@ Files in `~/.bashrc.d/` are included into `~/.bashrc` in **alphabetical** order.
 This sets a `GIT_ROOT` environment variable. It defaults to `$CONTAINER_WORKSPACE_FOLDER`. When supplying the value, the same
 Expression s present in the container.
 
-The `GIT_ROOT` environment variable is set in the file `~/.bashrc.d/01_GIT_ROOT_env.sh` of the container user home.
+The `GIT_ROOT` environment variable is set in the file `~/.bashrc.d/010_GIT_ROOT_env.sh` of the container user home.
 
 ### `pathAppend` Option
 
@@ -60,7 +60,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
 characters need to be escaped like so: `\\
 # bashrc (bashrc)
@@ -81,7 +81,7 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
 .
 This is to prevent vscode from substituting the `
@@ -103,12 +103,12 @@ set startup options
 |-----|-----|-----|-----|
 | version | Select the version to install. | string | latest |
 | gitRoot | Where the root of the git directory is located. Defaults to the value of the workspace folder | string | \$CONTAINER_WORKSPACE_FOLDER |
-| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/10_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
+| pathAppend | Appends this Path to the container PATH environment variable using ~/.bashrc.d/100_bash_path_append.sh | string | \$CONTAINER_WORKSPACE_FOLDER/scripts |
 #{Customizations}
  variable, and for json to accept the slash which itself needs escaping to`\\`.
 `\\${CONTAINER_WORKSPACE_FOLDER}`  as an example refers to the mounted root of the container. 
 
-The path is mofied in the file `~/.bashrc.d/10_bash_path_append.sh` of the container user home.
+The path is mofied in the file `~/.bashrc.d/100_bash_path_append.sh` of the container user home.
 
 
 

@@ -40,7 +40,7 @@ done
 echo "📦 Installing argbash library to ${FEATURE_LIB_TARGET_DIR}"
 mkdir -p "${FEATURE_LIB_TARGET_DIR}"
 cp -r ${FEATURE_DIR}/scripts/lib "${FEATURE_LIB_TARGET_DIR}/git-hooks"
-BASHRCDFILENAME="${BASHRCDFILENAME:-30-git-hooks.sh}"
+BASHRCDFILENAME="${BASHRCDFILENAME:-300-git-hooks.sh}"
 function write_env_vars_to_bashrc() {
     local var_name="$1"
     local var_value="$2"
