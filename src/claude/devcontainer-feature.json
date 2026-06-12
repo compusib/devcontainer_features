@@ -1,0 +1,50 @@
+{
+    "id": "claude",
+    "version": "0.1.0",
+    "name": "Claude",
+    "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and links the container ~/.claude to the host home when mounted.",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
+    "options": {
+        "installSettingsBridge": {
+            "type": "boolean",
+            "default": true,
+            "description": "Install the compusib.settings-bridge VS Code extension."
+        },
+        "settingsBridgeRepoPath": {
+            "type": "string",
+            "default": "/workspace/compusib/ai",
+            "description": "Local working tree of settingsBridgeRepo, if it is already checked out into the container (e.g. bind-mounted for extension development). When it contains a *.vsix at settingsBridgeVsixDir it is used as the source, preferred over cloning. Set to empty to always download."
+        },
+        "settingsBridgeRepo": {
+            "type": "string",
+            "default": "git@github.com:compusib/ai.git",
+            "description": "Git URL of the repo to clone the settings-bridge .vsix from when no local working tree (settingsBridgeRepoPath) is present. SSH form by default (relies on SSH-agent forwarding); use the https URL if your container has an HTTPS credential helper instead."
+        },
+        "settingsBridgeRef": {
+            "type": "string",
+            "default": "main",
+            "description": "Git ref (branch/tag) to fetch when downloading the .vsix."
+        },
+        "settingsBridgeVsixDir": {
+            "type": "string",
+            "default": "vscode/settings-bridge/dist",
+            "description": "Directory holding the built *.vsix, relative to the repo root. Applies identically to settingsBridgeRepoPath and to a fresh clone of settingsBridgeRepo."
+        },
+        "extensionId": {
+            "type": "string",
+            "default": "compusib.settings-bridge",
+            "description": "Extension id (publisher.name) used for the already-installed idempotency guard."
+        },
+        "hostHomeMountpoint": {
+            "type": "string",
+            "default": "~/host-home",
+            "description": "Location where the host home directory is mounted into the container. When it contains a .claude directory, the container's ~/.claude is symlinked to it. A leading ~/ is expanded to $HOME at runtime."
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": []
+        }
+    },
+    "postAttachCommand": "link-host-claude || true; install-settings-bridge || true"
+}

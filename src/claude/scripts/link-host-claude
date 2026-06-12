@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# Link the container's ~/.claude to the host home's .claude when the host home is mounted.
+#
+# Designed to run from the feature's postAttachCommand. Never fails the attach and never
+# clobbers a real ~/.claude directory.
+
+set -euo pipefail
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+
+HOST_HOME_MOUNTPOINT="~/host-home"
+# shellcheck source=/dev/null
+[[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
+
+log() { echo "🔧 [link-host-claude] $*"; }
+
+# Expand a leading ~/ (or bare ~) to $HOME.
+host_home="$HOST_HOME_MOUNTPOINT"
+case "$host_home" in
+    "~") host_home="$HOME" ;;
+    "~/"*) host_home="$HOME/${host_home#\~/}" ;;
+esac
+
+target="${host_home%/}/.claude"
+link="$HOME/.claude"
+
+if [[ ! -d "$target" ]]; then
+    log "host home not present at ${target}, skipping."
+    exit 0
+fi
+
+if [[ -L "$link" ]]; then
+    # Already a symlink: (re)point it at the target.
+    if [[ "$(readlink "$link")" == "$target" ]]; then
+        log "~/.claude already linked to ${target}."
+        exit 0
+    fi
+    log "repointing existing ~/.claude symlink to ${target}"
+    ln -sfn "$target" "$link"
+elif [[ -e "$link" ]]; then
+    # A real file/directory exists: do not clobber it.
+    log "⚠️  ~/.claude already exists and is not a symlink, leaving it untouched."
+    exit 0
+else
+    log "linking ~/.claude -> ${target}"
+    ln -s "$target" "$link"
+fi
+
+log "✅ ~/.claude -> $(readlink "$link")"
