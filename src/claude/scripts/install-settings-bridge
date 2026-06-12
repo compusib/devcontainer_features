@@ -1,0 +1,112 @@
+#!/bin/bash
+#
+# Install the compusib.settings-bridge VS Code extension.
+#
+# The source is always a working tree of the settings-bridge repo; the only question is whether
+# one is already on disk or has to be fetched:
+#   1. A local working tree already in the container (e.g. bind-mounted for extension development)
+#      -> install from it and remove any previously downloaded home cache.
+#   2. Otherwise clone the prebuilt .vsix from git (reusing the container's own git auth) into a
+#      home cache and install from there.
+# The *.vsix lives at <repo-root>/$SETTINGS_BRIDGE_VSIX_DIR in both cases.
+#
+# Designed to run from the feature's postAttachCommand. It never fails the attach: any skip
+# condition (extension already installed, no `code` CLI, no source available) exits 0.
+
+set -euo pipefail
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+FORCE=0
+[[ "${1:-}" == "--force" ]] && FORCE=1
+
+# Defaults (overridden by the feature config written at install time).
+INSTALL_SETTINGS_BRIDGE="true"
+SETTINGS_BRIDGE_REPO_PATH="/workspace/compusib/ai"
+SETTINGS_BRIDGE_REPO="git@github.com:compusib/ai.git"
+SETTINGS_BRIDGE_REF="main"
+SETTINGS_BRIDGE_VSIX_DIR="vscode/settings-bridge/dist"
+EXTENSION_ID="compusib.settings-bridge"
+# shellcheck source=/dev/null
+[[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
+
+CACHE_DIR="$HOME/.cache/claude-feature/settings-bridge"
+
+log() { echo "🔧 [settings-bridge] $*"; }
+
+if [[ "$INSTALL_SETTINGS_BRIDGE" != "true" ]]; then
+    log "installSettingsBridge is disabled, skipping."
+    exit 0
+fi
+
+if ! command -v code >/dev/null 2>&1; then
+    log "the 'code' CLI is not available yet, skipping extension install."
+    exit 0
+fi
+
+# Return the first *.vsix in a directory, or empty if none.
+first_vsix() {
+    local dir="$1"
+    [[ -d "$dir" ]] || return 0
+    local f
+    for f in "$dir"/*.vsix; do
+        [[ -e "$f" ]] || continue
+        printf '%s\n' "$f"
+        return 0
+    done
+}
+
+install_vsix() {
+    local vsix="$1"
+    log "installing ${EXTENSION_ID} from ${vsix}"
+    code --install-extension "$vsix" --force
+    log "✅ installed ${EXTENSION_ID}"
+}
+
+# 1) Prefer a local working tree of the repo if one is already on disk (development workflow).
+local_vsix_dir=""
+if [[ -n "$SETTINGS_BRIDGE_REPO_PATH" ]]; then
+    local_vsix_dir="${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}"
+fi
+if [[ -n "$local_vsix_dir" ]]; then
+    local_vsix="$(first_vsix "$local_vsix_dir")"
+    if [[ -n "$local_vsix" ]]; then
+        log "local working tree detected at ${SETTINGS_BRIDGE_REPO_PATH}"
+        # The extension now comes from the local tree; drop any stale downloaded copy.
+        if [[ -d "$CACHE_DIR" ]]; then
+            log "removing stale home cache ${CACHE_DIR}"
+            rm -rf "$CACHE_DIR"
+        fi
+        # Always force-install from the local tree so in-development edits propagate.
+        install_vsix "$local_vsix"
+        exit 0
+    fi
+    log "no *.vsix under ${local_vsix_dir}, falling back to clone."
+fi
+
+# 2) Download fallback. Skip the clone if the extension is already installed (unless --force).
+if [[ "$FORCE" -ne 1 ]] && code --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
+    log "${EXTENSION_ID} already installed, skipping download."
+    exit 0
+fi
+
+tmp=""
+cleanup() { [[ -n "$tmp" && -d "$tmp" ]] && rm -rf "$tmp"; }
+trap cleanup EXIT
+
+log "fetching ${EXTENSION_ID} from ${SETTINGS_BRIDGE_REPO} (${SETTINGS_BRIDGE_REF})"
+tmp="$(mktemp -d)"
+# Shallow + sparse clone so we only pull the vsix directory, using the container's git auth.
+git clone --depth 1 --branch "$SETTINGS_BRIDGE_REF" --filter=blob:none --sparse \
+    "$SETTINGS_BRIDGE_REPO" "$tmp"
+git -C "$tmp" sparse-checkout set "$SETTINGS_BRIDGE_VSIX_DIR"
+
+downloaded_vsix="$(first_vsix "${tmp%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
+if [[ -z "$downloaded_vsix" ]]; then
+    log "no *.vsix found under ${SETTINGS_BRIDGE_VSIX_DIR} in the repo, nothing to install."
+    exit 0
+fi
+
+mkdir -p "$CACHE_DIR"
+cp "$downloaded_vsix" "$CACHE_DIR/"
+cached_vsix="$(first_vsix "$CACHE_DIR")"
+install_vsix "$cached_vsix"

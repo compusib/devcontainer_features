@@ -9,14 +9,14 @@
       ]
     },
     "ghcr.io/compusib/devcontainer_features/bashrc:0": {
-      "version": "0.0.7",
-      "resolved": "ghcr.io/compusib/devcontainer_features/bashrc@sha256:946361d21e955f2b1be28117c6a4fdd7bf3e3793e1234972f03723abb3d4998b",
-      "integrity": "sha256:946361d21e955f2b1be28117c6a4fdd7bf3e3793e1234972f03723abb3d4998b"
+      "version": "0.0.8",
+      "resolved": "ghcr.io/compusib/devcontainer_features/bashrc@sha256:a08d8591111117e0355403d7069cbf52bb4452eb54caa7711ba3045a892c726f",
+      "integrity": "sha256:a08d8591111117e0355403d7069cbf52bb4452eb54caa7711ba3045a892c726f"
     },
     "ghcr.io/compusib/devcontainer_features/starship:latest": {
-      "version": "0.0.3",
-      "resolved": "ghcr.io/compusib/devcontainer_features/starship@sha256:a2d51c6416479fa9a2983653f2a9e84f643e47239b7685d75dadca667bca5a52",
-      "integrity": "sha256:a2d51c6416479fa9a2983653f2a9e84f643e47239b7685d75dadca667bca5a52",
+      "version": "0.0.4",
+      "resolved": "ghcr.io/compusib/devcontainer_features/starship@sha256:ef34a7212eaa99baf9fe297fcb62accc586e518193a50af74af6004769d5b65f",
+      "integrity": "sha256:ef34a7212eaa99baf9fe297fcb62accc586e518193a50af74af6004769d5b65f",
       "dependsOn": [
         "ghcr.io/compusib/devcontainer_features/bashrc"
       ]

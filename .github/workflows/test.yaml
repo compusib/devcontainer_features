@@ -17,6 +17,7 @@ jobs:
           - hello
           - bashrc
           - argbash
+          - claude
         baseImage:
           - debian:latest
           - ubuntu:latest
@@ -41,6 +42,7 @@ jobs:
           - bashrc
           - argbash
           - git-hooks
+          - claude
     steps:
       - uses: actions/checkout@v4
 
