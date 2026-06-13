@@ -14,9 +14,12 @@
       "integrity": "sha256:a08d8591111117e0355403d7069cbf52bb4452eb54caa7711ba3045a892c726f"
     },
     "ghcr.io/compusib/devcontainer_features/claude:0": {
-      "version": "0.1.0",
-      "resolved": "ghcr.io/compusib/devcontainer_features/claude@sha256:c091e869b5dea5cc9f729d37a72e158ae8ed8b32731ab839c29dfd2d8c062f65",
-      "integrity": "sha256:c091e869b5dea5cc9f729d37a72e158ae8ed8b32731ab839c29dfd2d8c062f65"
+      "version": "0.2.0",
+      "resolved": "ghcr.io/compusib/devcontainer_features/claude@sha256:247f151b1f62ce35873a42563186c013dcb54c3e7a775526117227af4d396a20",
+      "integrity": "sha256:247f151b1f62ce35873a42563186c013dcb54c3e7a775526117227af4d396a20",
+      "dependsOn": [
+        "ghcr.io/compusib/devcontainer_features/bashrc:0"
+      ]
     },
     "ghcr.io/compusib/devcontainer_features/starship:latest": {
       "version": "0.0.4",
