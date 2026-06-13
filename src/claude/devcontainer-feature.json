@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and links the container ~/.claude to the host home when mounted.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -9,6 +9,11 @@
             "type": "boolean",
             "default": true,
             "description": "Install the compusib.settings-bridge VS Code extension."
+        },
+        "skipInstallSystemPackages": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip the fallback installation of system packages (rclone, jq, gh) the feature relies on. Set to true when those packages are baked into your devcontainer's Dockerfile so the feature does not try to install them at build time."
         },
         "settingsBridgeRepoPath": {
             "type": "string",
