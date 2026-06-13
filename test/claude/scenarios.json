@@ -1,13 +1,4 @@
 {
-    "host_home_link": {
-        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-        "features": {
-            "claude": {
-                "hostHomeMountpoint": "/tmp/fake-host-home",
-                "installSettingsBridge": false
-            }
-        }
-    },
     "settings_bridge_disabled": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {

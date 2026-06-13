@@ -14,7 +14,6 @@ SETTINGS_BRIDGE_REPO="${SETTINGSBRIDGEREPO:-git@github.com:compusib/ai.git}"
 SETTINGS_BRIDGE_REF="${SETTINGSBRIDGEREF:-main}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGSBRIDGEVSIXDIR:-vscode/settings-bridge/dist}"
 EXTENSION_ID="${EXTENSIONID:-compusib.settings-bridge}"
-HOST_HOME_MOUNTPOINT="${HOSTHOMEMOUNTPOINT:-~/host-home}"
 CLAUDE_PLUGINS="${CLAUDEPLUGINS:-base-stack@compusib}"
 PLUGIN_MARKETPLACE="${PLUGINMARKETPLACE:-git@github.com:compusib/ai.git}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAPCLAUDESYNC:-true}"
@@ -124,7 +123,6 @@ FEATURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Install the runtime helper scripts to /usr/local/bin.
 scripts_to_install=(
     "install-settings-bridge"
-    "link-host-claude"
     "bootstrap-claude-sync"
 )
 for script in "${scripts_to_install[@]}"; do
@@ -137,7 +135,7 @@ for script in "${scripts_to_install[@]}"; do
     fi
 done
 
-# Persist the resolved options so the runtime (postAttach) helpers can read them.
+# Persist the resolved options so the runtime (postStart/postAttach) helpers can read them.
 # No secrets are stored here, only configuration.
 echo "🔧 Writing feature config to ${CONFIG_FILE}"
 mkdir -p "${FEATURE_LIB_TARGET_DIR}"
@@ -148,11 +146,10 @@ SETTINGS_BRIDGE_REPO="${SETTINGS_BRIDGE_REPO}"
 SETTINGS_BRIDGE_REF="${SETTINGS_BRIDGE_REF}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGS_BRIDGE_VSIX_DIR}"
 EXTENSION_ID="${EXTENSION_ID}"
-HOST_HOME_MOUNTPOINT="${HOST_HOME_MOUNTPOINT}"
 CLAUDE_PLUGINS="${CLAUDE_PLUGINS}"
 PLUGIN_MARKETPLACE="${PLUGIN_MARKETPLACE}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAP_CLAUDE_SYNC}"
 EOF
 
 echo "✅ claude feature installed successfully!"
-echo "   Helpers 'link-host-claude', 'install-settings-bridge', and 'bootstrap-claude-sync' run on postAttach."
+echo "   'install-settings-bridge' runs on postStart; 'bootstrap-claude-sync' runs on postAttach."

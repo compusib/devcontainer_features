@@ -1,25 +1,15 @@
 #!/bin/bash
 #
 # Bootstrap Claude on this container: ensure the plugin marketplace + plugins are
-# installed, and (for a container-local ~/.claude) provision data sync via
-# `rcloneops claude-bootstrap`.
+# installed, and provision data sync for ~/.claude via `rcloneops claude-bootstrap`.
 #
-# Designed to run from the feature's postAttachCommand, after link-host-claude.
-# Never fails the attach.
-#
-# External-mount rule: when ~/.claude is a symlink into the mounted host home
-# (link-host-claude's doing), the HOST owns the data and its syncing. We do NOT
-# run rcloneops there — establishing a baseline would contend with the host, and
-# installing session hooks would write THIS container's absolute rcloneops path
-# into the host's shared settings.json, breaking the host's own sessions. We
-# still ensure the plugin marketplace + plugins are installed.
+# Designed to run from the feature's postAttachCommand. Never fails the attach.
 
 set -uo pipefail
 
 CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
 
 # Defaults; overridden by config.env written at install time.
-HOST_HOME_MOUNTPOINT="~/host-home"
 PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
 CLAUDE_PLUGINS=""
 BOOTSTRAP_CLAUDE_SYNC="true"
@@ -27,27 +17,6 @@ BOOTSTRAP_CLAUDE_SYNC="true"
 [[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
 
 log() { echo "🔧 [bootstrap-claude-sync] $*"; }
-
-# Expand a leading ~/ (or bare ~) to $HOME.
-host_home="$HOST_HOME_MOUNTPOINT"
-case "$host_home" in
-    "~") host_home="$HOME" ;;
-    "~/"*) host_home="$HOME/${host_home#\~/}" ;;
-esac
-
-claude_dir="$HOME/.claude"
-
-# Is ~/.claude an external (host) mount? link-host-claude symlinks it to the
-# mounted host home's .claude; treat a symlink resolving under host_home as such.
-is_external_mount() {
-    [[ -L "$claude_dir" ]] || return 1
-    local target
-    target="$(readlink "$claude_dir")"
-    case "$target" in
-        "${host_home%/}/"*) return 0 ;;
-        *) return 1 ;;
-    esac
-}
 
 # Ensure the compusib marketplace is registered and the required plugins are
 # installed. Idempotent. Needs the `claude` CLI; skips cleanly without it.
@@ -73,16 +42,11 @@ ensure_plugins() {
     done
 }
 
-# Provision data sync for a container-local ~/.claude via rcloneops. Skipped for
-# an external/host mount (the host owns sync) and when disabled or rcloneops is
-# absent.
+# Provision data sync for ~/.claude via rcloneops. Skipped when disabled or when
+# rcloneops is absent (it ships with the bashrc feature's bash repo).
 bootstrap_sync() {
     if [[ "$BOOTSTRAP_CLAUDE_SYNC" != "true" ]]; then
         log "bootstrapClaudeSync=false — skipping data sync."
-        return 0
-    fi
-    if is_external_mount; then
-        log "~/.claude is an external (host) mount — host owns sync; skipping rcloneops (no baseline, no session hooks)."
         return 0
     fi
     if ! command -v rcloneops >/dev/null 2>&1; then
@@ -90,7 +54,7 @@ bootstrap_sync() {
         return 0
     fi
 
-    log "~/.claude is container-local — running 'rcloneops claude-bootstrap' (baseline + session hooks)."
+    log "running 'rcloneops claude-bootstrap' (baseline + session hooks)."
     rcloneops claude-bootstrap --no-dry-run \
         || log "⚠️  'rcloneops claude-bootstrap' returned non-zero (missing B2 credentials?)."
 }
