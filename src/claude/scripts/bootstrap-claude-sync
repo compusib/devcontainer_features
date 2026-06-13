@@ -18,6 +18,26 @@ BOOTSTRAP_CLAUDE_SYNC="true"
 
 log() { echo "🔧 [bootstrap-claude-sync] $*"; }
 
+# Lifecycle hooks run via `/bin/sh -c` — a non-interactive, non-login shell that
+# never sources ~/.bashrc, so the PATH fragments the bashrc feature writes into
+# ~/.bashrc.d/*.sh (where `claude` and `rcloneops` come from) are not applied.
+# Source those fragments directly: sourcing ~/.bashrc itself is unreliable since
+# the stock file returns early for non-interactive shells before its .bashrc.d
+# loop runs. Tolerant of fragments that assume `set -u` is off or emit noise.
+load_bashrc_path() {
+    local frag
+    [[ -d "$HOME/.bashrc.d" ]] || return 0
+    set +u
+    shopt -s nullglob
+    for frag in "$HOME"/.bashrc.d/*.sh; do
+        # shellcheck source=/dev/null
+        . "$frag" >/dev/null 2>&1 || true
+    done
+    shopt -u nullglob
+    set -u
+}
+load_bashrc_path
+
 # Ensure the compusib marketplace is registered and the required plugins are
 # installed. Idempotent. Needs the `claude` CLI; skips cleanly without it.
 ensure_plugins() {
