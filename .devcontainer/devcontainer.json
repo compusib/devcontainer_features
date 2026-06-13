@@ -18,7 +18,8 @@
                 "mads-hartmann.bash-ide-vscode",
                 "GitHub.vscode-pull-request-github",
                 "mhutchie.git-graph",
-                "Anthropic.claude-code"
+                "Anthropic.claude-code",
+                "compusib.settings-bridge"
             ]
         }
     },
