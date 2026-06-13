@@ -26,6 +26,24 @@ and may be followed by its own optional body.
 
 If an optional body is present, it must be a bullet-point list using `*`.
 
+The scope goes in round brackets `()`. The `<...>` placeholders are required parts; only
+parts shown as `[optional ...]` may be omitted.
+
+## Breaking changes
+
+If a change is breaking, a `!` MUST appear immediately before the `:`, after the scope:
+`feat(bashrc)!: ...` (or `feat!: ...` when there is no scope). Prefer this `!` — it marks
+the breaking change with one character.
+
+The `!` alone is sufficient. Add a `BREAKING CHANGE: <description>` footer block only when
+the breaking nature needs explanation the description does not already give:
+
+```
+feat(bashrc)!: drop legacy pathAppend option
+
+BREAKING CHANGE: pathAppend is removed; use pathPrepend instead.
+```
+
 ## Scope
 
 This repo is a collection of devcontainer **features**. Each feature lives in
