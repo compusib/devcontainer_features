@@ -14,9 +14,9 @@
       "integrity": "sha256:a08d8591111117e0355403d7069cbf52bb4452eb54caa7711ba3045a892c726f"
     },
     "ghcr.io/compusib/devcontainer_features/claude:0": {
-      "version": "0.2.0",
-      "resolved": "ghcr.io/compusib/devcontainer_features/claude@sha256:247f151b1f62ce35873a42563186c013dcb54c3e7a775526117227af4d396a20",
-      "integrity": "sha256:247f151b1f62ce35873a42563186c013dcb54c3e7a775526117227af4d396a20",
+      "version": "0.2.1",
+      "resolved": "ghcr.io/compusib/devcontainer_features/claude@sha256:f23a2191c26bac5b16aabd4ae91fc8465ca0bb36ad5c9143a197901d8a285d9f",
+      "integrity": "sha256:f23a2191c26bac5b16aabd4ae91fc8465ca0bb36ad5c9143a197901d8a285d9f",
       "dependsOn": [
         "ghcr.io/compusib/devcontainer_features/bashrc:0"
       ]
