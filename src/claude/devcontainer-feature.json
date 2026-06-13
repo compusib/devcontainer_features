@@ -1,14 +1,19 @@
 {
     "id": "claude",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "name": "Claude",
-    "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and links the container ~/.claude to the host home when mounted.",
+    "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
     "options": {
         "installSettingsBridge": {
             "type": "boolean",
             "default": true,
             "description": "Install the compusib.settings-bridge VS Code extension."
+        },
+        "skipInstallSystemPackages": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip the fallback installation of system packages (rclone, jq, gh) the feature relies on. Set to true when those packages are baked into your devcontainer's Dockerfile so the feature does not try to install them at build time."
         },
         "settingsBridgeRepoPath": {
             "type": "string",
@@ -35,16 +40,30 @@
             "default": "compusib.settings-bridge",
             "description": "Extension id (publisher.name) used for the already-installed idempotency guard."
         },
-        "hostHomeMountpoint": {
+        "claudePlugins": {
             "type": "string",
-            "default": "~/host-home",
-            "description": "Location where the host home directory is mounted into the container. When it contains a .claude directory, the container's ~/.claude is symlinked to it. A leading ~/ is expanded to $HOME at runtime."
+            "default": "base-stack@compusib",
+            "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none."
+        },
+        "pluginMarketplace": {
+            "type": "string",
+            "default": "git@github.com:compusib/ai.git",
+            "description": "Claude Code plugin marketplace registered (via 'claude plugin marketplace add') before installing claudePlugins. SSH form by default (relies on SSH-agent forwarding)."
+        },
+        "bootstrapClaudeSync": {
+            "type": "boolean",
+            "default": true,
+            "description": "Run 'rcloneops claude-bootstrap' on attach to provision Claude data sync for ~/.claude (bisync baseline + session hooks against Backblaze B2). Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely."
         }
+    },
+    "dependsOn": {
+        "ghcr.io/compusib/devcontainer_features/bashrc:0": {}
     },
     "customizations": {
         "vscode": {
             "extensions": []
         }
     },
-    "postAttachCommand": "link-host-claude || true; install-settings-bridge || true"
+    "postStartCommand": "install-settings-bridge || true",
+    "postAttachCommand": "bootstrap-claude-sync || true"
 }

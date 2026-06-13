@@ -10,8 +10,9 @@
 #      home cache and install from there.
 # The *.vsix lives at <repo-root>/$SETTINGS_BRIDGE_VSIX_DIR in both cases.
 #
-# Designed to run from the feature's postAttachCommand. It never fails the attach: any skip
-# condition (extension already installed, no `code` CLI, no source available) exits 0.
+# Designed to run from the feature's postStartCommand (before the window attaches, so the
+# extension is active without a reload). It never fails startup: any skip condition (extension
+# already installed, no `code` CLI yet, no source available) exits 0.
 
 set -euo pipefail
 

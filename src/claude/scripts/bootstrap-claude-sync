@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# Bootstrap Claude on this container: ensure the plugin marketplace + plugins are
+# installed, and provision data sync for ~/.claude via `rcloneops claude-bootstrap`.
+#
+# Designed to run from the feature's postAttachCommand. Never fails the attach.
+
+set -uo pipefail
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+
+# Defaults; overridden by config.env written at install time.
+PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
+CLAUDE_PLUGINS=""
+BOOTSTRAP_CLAUDE_SYNC="true"
+# shellcheck source=/dev/null
+[[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
+
+log() { echo "🔧 [bootstrap-claude-sync] $*"; }
+
+# Ensure the compusib marketplace is registered and the required plugins are
+# installed. Idempotent. Needs the `claude` CLI; skips cleanly without it.
+ensure_plugins() {
+    if ! command -v claude >/dev/null 2>&1; then
+        log "⚠️  'claude' CLI not on PATH; skipping plugin/marketplace install."
+        return 0
+    fi
+    if [[ -z "$CLAUDE_PLUGINS" ]]; then
+        log "⚠️  no claudePlugins configured; nothing to install."
+        return 0
+    fi
+
+    log "ensuring marketplace '${PLUGIN_MARKETPLACE}' is registered"
+    claude plugin marketplace add "$PLUGIN_MARKETPLACE" 2>/dev/null \
+        || log "⚠️  could not add marketplace (already added, or no SSH access)."
+
+    local plugin
+    for plugin in $CLAUDE_PLUGINS; do
+        log "ensuring plugin '${plugin}' is installed"
+        claude plugin install "$plugin" 2>/dev/null \
+            || log "⚠️  could not install plugin '${plugin}'."
+    done
+}
+
+# Provision data sync for ~/.claude via rcloneops. Skipped when disabled or when
+# rcloneops is absent (it ships with the bashrc feature's bash repo).
+bootstrap_sync() {
+    if [[ "$BOOTSTRAP_CLAUDE_SYNC" != "true" ]]; then
+        log "bootstrapClaudeSync=false — skipping data sync."
+        return 0
+    fi
+    if ! command -v rcloneops >/dev/null 2>&1; then
+        log "⚠️  'rcloneops' not on PATH; skipping Claude data sync bootstrap."
+        return 0
+    fi
+
+    log "running 'rcloneops claude-bootstrap' (baseline + session hooks)."
+    rcloneops claude-bootstrap --no-dry-run \
+        || log "⚠️  'rcloneops claude-bootstrap' returned non-zero (missing B2 credentials?)."
+}
+
+ensure_plugins
+bootstrap_sync
+log "✅ done."
+exit 0
