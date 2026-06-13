@@ -7,10 +7,7 @@ services:
       #- ..:/workspaces/devcontainer_features:cached
       - type: volume
         source: combined
-        target: /workspace/
-      - type: volume
-        source: host-home
-        target: /home/node/host-home
+        target: /workspace
     networks:
       - stack
       - gateway

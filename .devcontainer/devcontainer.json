@@ -18,8 +18,7 @@
                 "mads-hartmann.bash-ide-vscode",
                 "GitHub.vscode-pull-request-github",
                 "mhutchie.git-graph",
-                "Anthropic.claude-code",
-                "compusib.settings-bridge"
+                "Anthropic.claude-code"
             ]
         }
     },
@@ -45,6 +44,11 @@
         "GIT_AUTHOR_NAME": "${localEnv:GIT_AUTHOR_NAME}",
 		"GIT_AUTHOR_EMAIL": "${localEnv:GIT_AUTHOR_EMAIL}",
 		"GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
+		// Backblaze B2 credentials for `rcloneops` (claude data sync). Forwarded
+		// from the host env; never commit real values here.
+		"DEVCONTAINERS_B2_ACCOUNT": "${localEnv:DEVCONTAINERS_B2_ACCOUNT}",
+		"DEVCONTAINERS_B2_KEY": "${localEnv:DEVCONTAINERS_B2_KEY}",
+		"DEVCONTAINERS_B2_BUCKET": "${localEnv:DEVCONTAINERS_B2_BUCKET}",
 		// TEMPORARY: remove once the bashrc feature sets BASH_REPO_ROOT itself
 		"BASH_REPO_ROOT": "/workspace/compusib/bash"
     },
