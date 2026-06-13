@@ -37,7 +37,9 @@
         // ncp, which won't dereference it). It is consumed via its published GHCR image instead.
         // Defaults match this environment. Test the source directly from the repo root with:
         //   devcontainer features test -f claude -i mcr.microsoft.com/devcontainers/base:ubuntu .
-        "ghcr.io/compusib/devcontainer_features/claude:0": {}
+        "ghcr.io/compusib/devcontainer_features/claude:0": {
+            "claudePlugins": "base-stack@compusib"
+        }
     },
     "containerEnv": {
         "GIT_AUTHOR_NAME": "${localEnv:GIT_AUTHOR_NAME}",

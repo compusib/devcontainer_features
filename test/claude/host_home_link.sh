@@ -27,6 +27,12 @@ check "re-run is idempotent" bash -c "
     test \"\$(readlink \"\$HOME/.claude\")\" = /tmp/fake-host-home/.claude
 "
 
+# With ~/.claude now a symlink into the host-home mount, bootstrap-claude-sync must
+# treat it as an external mount and skip rcloneops (the host owns syncing).
+check "bootstrap-claude-sync detects external mount and skips rcloneops" bash -c "
+    bootstrap-claude-sync 2>&1 | grep -q 'external (host) mount'
+"
+
 # A real ~/.claude directory must not be clobbered.
 check "does not clobber a real ~/.claude" bash -c "
     rm -rf \"\$HOME/.claude\" &&

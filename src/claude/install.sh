@@ -15,6 +15,9 @@ SETTINGS_BRIDGE_REF="${SETTINGSBRIDGEREF:-main}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGSBRIDGEVSIXDIR:-vscode/settings-bridge/dist}"
 EXTENSION_ID="${EXTENSIONID:-compusib.settings-bridge}"
 HOST_HOME_MOUNTPOINT="${HOSTHOMEMOUNTPOINT:-~/host-home}"
+CLAUDE_PLUGINS="${CLAUDEPLUGINS:-base-stack@compusib}"
+PLUGIN_MARKETPLACE="${PLUGINMARKETPLACE:-git@github.com:compusib/ai.git}"
+BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAPCLAUDESYNC:-true}"
 
 # Ensure the runtime dependencies are available.
 #
@@ -122,6 +125,7 @@ FEATURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 scripts_to_install=(
     "install-settings-bridge"
     "link-host-claude"
+    "bootstrap-claude-sync"
 )
 for script in "${scripts_to_install[@]}"; do
     if [[ -f "${FEATURE_DIR}/scripts/${script}" ]]; then
@@ -145,7 +149,10 @@ SETTINGS_BRIDGE_REF="${SETTINGS_BRIDGE_REF}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGS_BRIDGE_VSIX_DIR}"
 EXTENSION_ID="${EXTENSION_ID}"
 HOST_HOME_MOUNTPOINT="${HOST_HOME_MOUNTPOINT}"
+CLAUDE_PLUGINS="${CLAUDE_PLUGINS}"
+PLUGIN_MARKETPLACE="${PLUGIN_MARKETPLACE}"
+BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAP_CLAUDE_SYNC}"
 EOF
 
 echo "✅ claude feature installed successfully!"
-echo "   Helpers 'link-host-claude' and 'install-settings-bridge' run on postAttach."
+echo "   Helpers 'link-host-claude', 'install-settings-bridge', and 'bootstrap-claude-sync' run on postAttach."

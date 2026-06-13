@@ -54,3 +54,38 @@ to `true` so the feature does not attempt to install them at build time:
     }
 }
 ```
+
+## Claude bootstrap on attach (`bootstrap-claude-sync`)
+
+On `postAttachCommand` (after `link-host-claude`), the feature runs
+`bootstrap-claude-sync`, which:
+
+1. **Ensures the plugin marketplace + plugins are installed.** It registers
+   `pluginMarketplace` (default `git@github.com:compusib/ai.git`) with
+   `claude plugin marketplace add`, then installs each plugin in `claudePlugins`
+   (default `base-stack@compusib`). Idempotent; skips cleanly if the `claude`
+   CLI is absent.
+2. **Provisions data sync for a container-local `~/.claude`** via
+   `rcloneops claude-bootstrap --no-dry-run` (establishes the bisync baseline and
+   installs `SessionStart`/`SessionEnd` sync hooks). Needs the `DEVCONTAINERS_B2_*`
+   credentials in the container env; never fails the attach. Disable with
+   `bootstrapClaudeSync: false`.
+
+### External (host) mount of `~/.claude`
+
+When `link-host-claude` has symlinked `~/.claude` into the mounted host home,
+the **host owns the data and its syncing**, so `bootstrap-claude-sync` **does not
+run `rcloneops`** there:
+
+- Establishing a bisync baseline from the container would contend with the host.
+- The session hooks embed *this container's* absolute `rcloneops` path
+  (`"<path>" claude --no-dry-run`); writing them into the host-shared
+  `settings.json` would break the host's own Claude sessions.
+
+The plugin marketplace + plugins are still installed in this case.
+
+### Required tools
+
+`bootstrap-claude-sync` uses `claude` (for plugins) and `rcloneops` (for sync;
+which itself needs `rclone` and `jq` — see above). Each step is skipped with a
+warning if its tool is not on `PATH`, so the attach never fails.
