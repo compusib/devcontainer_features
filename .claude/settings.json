@@ -47,7 +47,9 @@
       "Bash(grep -nE '^#{1,3} ' src/claude/README.md)",
       "Bash(git -c color.ui=never diff -- src/claude/scripts/bootstrap-claude-sync src/claude/install.sh src/claude/devcontainer-feature.json)",
       "Bash(git rm *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit: $?\")"
     ],
     "additionalDirectories": [
       "/workspace/compusib/bash/args",
