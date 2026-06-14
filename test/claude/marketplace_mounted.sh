@@ -4,7 +4,7 @@
 # .claude-plugin/marketplace.json) -> the feature registers a local `directory` source.
 #
 # Like marketplace_online.sh, this proves install.sh threads the option into the real on-disk
-# config.env; here it drives the mounted branch end to end against that config.
+# config.env; here it drives the mounted branch against that config with `claude` stubbed.
 
 set -e
 
@@ -15,16 +15,17 @@ OVERRIDE="/tmp/compusib-marketplace"
 check "config.env records the mounted local-override path" \
     grep -q "PLUGIN_MARKETPLACE_LOCAL_OVERRIDE=\"$OVERRIDE\"" /usr/local/lib/features/claude/config.env
 
-# Materialise a checkout at the override path -> directory source, no git url remnant.
-check "ensure-compusib-marketplace writes a local directory source when mounted" bash -c '
+# Materialise a checkout at the override path -> a local directory source is registered.
+check "registers a local directory marketplace source when mounted" bash -c '
     o="/tmp/compusib-marketplace"
     mkdir -p "$o/.claude-plugin"
     printf "{\"name\":\"compusib\",\"plugins\":[]}" > "$o/.claude-plugin/marketplace.json"
-    s="$HOME/.claude/settings.json"; rm -f "$s"
-    ensure-compusib-marketplace
-    [ "$(jq -r ".extraKnownMarketplaces.compusib.source.source" "$s")" = "directory" ] &&
-    [ "$(jq -r ".extraKnownMarketplaces.compusib.source.path" "$s")" = "$o" ] &&
-    [ "$(jq -r ".extraKnownMarketplaces.compusib.source.url // \"absent\"" "$s")" = "absent" ]
+    bin="$(mktemp -d)"; export CLAUDE_LOG="$(mktemp)"
+    printf "#!/bin/bash\necho \"claude \$*\" >> \"\$CLAUDE_LOG\"\nexit 0\n" > "$bin/claude"
+    chmod +x "$bin/claude"
+    PATH="$bin:$PATH" ensure-marketplace-recursively-installed >/dev/null 2>&1
+    grep -q "plugin marketplace add $o" "$CLAUDE_LOG" &&
+    grep -q "plugin install base-stack@compusib" "$CLAUDE_LOG"
 '
 
 reportResults
