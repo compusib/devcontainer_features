@@ -6,5 +6,40 @@
                 "installSettingsBridge": false
             }
         }
+    },
+    "marketplace_online": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "installSettingsBridge": false,
+                "pluginMarketplaceLocalOverride": "/tmp/compusib-no-marketplace"
+            }
+        }
+    },
+    "marketplace_mounted": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "installSettingsBridge": false,
+                "pluginMarketplaceLocalOverride": "/tmp/compusib-marketplace"
+            }
+        }
+    },
+    "settings_bridge_local": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "settingsBridgeRepoPath": "/tmp/sb-local-tree"
+            }
+        }
+    },
+    "settings_bridge_remote": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "settingsBridgeRepoPath": "/tmp/sb-no-local-tree",
+                "settingsBridgeRepo": "/tmp/sb-seed-repo"
+            }
+        }
     }
 }
