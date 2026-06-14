@@ -38,7 +38,8 @@
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "claude": {
-                "settingsBridgeRepoPath": "/tmp/sb-no-local-tree"
+                "settingsBridgeRepoPath": "/tmp/sb-no-local-tree",
+                "settingsBridgeRepo": "/tmp/sb-seed-repo"
             }
         }
     }
