@@ -23,121 +23,43 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | settingsBridgeVsixDir | Directory holding the built *.vsix, relative to the repo root. Applies identically to settingsBridgeRepoPath and to a fresh clone of settingsBridgeRepo. | string | vscode/settings-bridge/dist |
 | extensionId | Extension id (publisher.name) used for the already-installed idempotency guard. | string | compusib.settings-bridge |
 | claudePlugins | Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none. | string | base-stack@compusib |
-| pluginMarketplace | Claude Code plugin marketplace registered (via 'claude plugin marketplace add') before installing claudePlugins. SSH form by default (relies on SSH-agent forwarding). | string | git@github.com:compusib/ai.git |
+| pluginMarketplace | Online (git) source for the compusib Claude Code plugin marketplace. Written declaratively into ~/.claude/settings.json (extraKnownMarketplaces) at postStart by ensure-compusib-marketplace; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding). | string | git@github.com:compusib/ai.git |
+| pluginMarketplaceLocalOverride | Directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source. | string | /workspace/compusib/ai |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to provision Claude data sync for ~/.claude (bisync baseline + session hooks against Backblaze B2). Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
 
-## System package dependencies
+## What it does
 
-This feature relies on a few system packages at runtime:
+On every container start (`postStartCommand`), `ensure-compusib-marketplace`
+writes `~/.claude/settings.json` with `jq` so Claude installs the compusib
+plugins itself — no `claude` binary, no session hook:
 
-- **`rclone`** — used to move/sync Claude data. Needs **>= 1.66** because
-  `rcloneops` drives `rclone bisync` with flags (`--conflict-resolve`,
-  `--resilient`, `--recover`, `--max-lock`) introduced in that release.
-- **`jq`** — used to read/manipulate JSON config.
-- **`gh`** — the GitHub CLI.
+- **`extraKnownMarketplaces.compusib`** — the marketplace source.
+- **`enabledPlugins`** — every plugin in `claudePlugins` (default `base-stack@compusib`).
 
-At build time the feature checks whether each command is already available:
+The source follows whether a local checkout is mounted:
 
-- `jq` and `gh`: if present it does nothing; if missing it installs the package
-  via `apt-get` as a fallback and prints a warning recommending you bake it into
-  your devcontainer image instead.
-- `rclone`: the version matters, not just presence. Debian's apt build lags far
-  behind (e.g. 1.60), so when `rclone` is missing **or older than 1.66** the
-  feature installs the latest via rclone's official script
-  (`curl https://rclone.org/install.sh | bash`) and warns. An already-recent
-  `rclone` is left untouched.
+- **`pluginMarketplaceLocalOverride`** (default `/workspace/compusib/ai`) holds a
+  `.claude-plugin/marketplace.json` → a **local `directory`** source.
+- otherwise → the **online `git`** source (**`pluginMarketplace`**).
 
-### Recommended: install them in your Dockerfile
+It is re-evaluated each start; flipping between local and online re-resolves cleanly.
 
-Installing these in your devcontainer's Dockerfile bakes them into the image so
-they don't get re-installed on every rebuild and the build stays reproducible.
+On attach (`postAttachCommand`), `bootstrap-claude-sync` syncs `~/.claude` to
+Backblaze B2 via `rcloneops` (disable with `bootstrapClaudeSync: false`).
 
-`jq` is in Debian's default repos. `rclone` must be **>= 1.66**, which the apt
-build is usually too old to satisfy, so install it from rclone's official script
-instead:
+## Requirements
 
-```dockerfile
-RUN apt-get update \
- && apt-get install -y --no-install-recommends jq curl unzip ca-certificates \
- && curl -fsSL https://rclone.org/install.sh | bash \
- && rm -rf /var/lib/apt/lists/*
-```
-
-`gh` is **not** in Debian's default repos — register GitHub's apt repository
-first (the feature prints these exact lines when it falls back to installing it):
-
-```dockerfile
-RUN install -m 0755 -d /etc/apt/keyrings \
- && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/gh.gpg \
- && chmod go+r /etc/apt/keyrings/gh.gpg \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/gh.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/gh.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends gh \
- && rm -rf /var/lib/apt/lists/*
-```
-
-### Skipping the fallback install
-
-Once the packages are provided by your image, set `skipInstallSystemPackages`
-to `true` so the feature does not attempt to install them at build time:
-
-```json
-"features": {
-    "ghcr.io/compusib/devcontainer_features/claude:0": {
-        "skipInstallSystemPackages": true
-    }
-}
-```
-
-## Claude bootstrap on attach (`bootstrap-claude-sync`)
-
-On `postAttachCommand`, the feature runs `bootstrap-claude-sync`, which:
-
-1. **Ensures the plugin marketplace + plugins are installed.** The actual install
-   is done by `ensure-claude-plugins`, which registers `pluginMarketplace`
-   (default `git@github.com:compusib/ai.git`) with `claude plugin marketplace add`
-   and installs each plugin in `claudePlugins` (default `base-stack@compusib`).
-   It is idempotent and **marker-gated** (`~/.claude/.plugins-ensured`, keyed on
-   the marketplace + plugin set), so it is cheap to re-run.
-
-   Because the bundled `claude` binary ships with the VS Code "Claude Code"
-   extension — which installs at *attach* time and **races** this command — a
-   single `postAttach` attempt is unreliable. So `bootstrap-claude-sync` both:
-   - calls `ensure-claude-plugins` directly as a **best-effort fast path** (a
-     no-op when `claude` is not yet on `PATH` — no warning), and
-   - installs a Claude **`SessionStart` hook** that runs `ensure-claude-plugins`
-     the first time `claude` actually runs, where `claude` is guaranteed on
-     `PATH`. This is the race-free path and the one that works in headless
-     (non-VS-Code) containers too.
-
-   > Plugins installed by `claude plugin install` take effect on the **next**
-   > session, so the first launch installs them and the second has them active
-   > (unless the fast path already installed them on attach).
-
-   The hook is merged idempotently into `~/.claude/settings.json` alongside the
-   `rcloneops` sync hooks (each matches a different command), preserving every
-   other key.
-2. **Provisions data sync for `~/.claude`** via
-   `rcloneops claude-bootstrap --no-dry-run` (establishes the bisync baseline and
-   installs `SessionStart`/`SessionEnd` sync hooks). Needs the B2 credentials in
-   the container env (see below); never fails the attach. Disable with
-   `bootstrapClaudeSync: false`.
-
-`~/.claude` is synced exclusively through `rcloneops` (bidirectional `rclone
-bisync` to Backblaze B2) — there is no host-directory symlinking.
-
-### B2 sync credentials
-
-`rcloneops` reads its Backblaze B2 credentials from the container environment
-(see `man rcloneops`). The remote-touching bootstrap step needs:
-
-- `DEVCONTAINERS_B2_ACCOUNT` — B2 account / application key ID.
-- `DEVCONTAINERS_B2_KEY` — B2 application key.
-- `DEVCONTAINERS_B2_BUCKET` — B2 bucket name.
-- account email via `DEVCONTAINER_USER_EMAIL`, falling back to `GIT_AUTHOR_EMAIL`.
-
-These are **secrets**: forward them from the host rather than committing them.
-In your devcontainer's `devcontainer.json`:
+- **Data sync** needs the **`bashrc`** feature (a `dependsOn`, installed
+  automatically) plus the compusib **bash repo mounted** at `compusibBashRepoRoot`
+  (default `/workspace/compusib/bash`) — that is what puts `rcloneops` on `PATH`.
+  Without it, sync is skipped.
+- **B2 credentials** in the container env (forward from the host as **secrets** —
+  never commit them): `DEVCONTAINERS_B2_ACCOUNT`, `DEVCONTAINERS_B2_KEY`,
+  `DEVCONTAINERS_B2_BUCKET`, and an email via `DEVCONTAINER_USER_EMAIL` (falls
+  back to `GIT_AUTHOR_EMAIL`). Missing credentials → sync is skipped; the attach
+  never fails.
+- **System packages** `rclone` (**>= 1.66**), `jq`, `gh`. Missing ones are
+  installed at build time (with a warning), unless `skipInstallSystemPackages`.
 
 ```jsonc
 "containerEnv": {
@@ -147,52 +69,31 @@ In your devcontainer's `devcontainer.json`:
 }
 ```
 
-If the credentials are missing, `bootstrap-claude-sync` cleanly no-ops (the
-attach never fails); sync simply does not happen until they are provided.
+## Recommendations
 
-### Requires the `bashrc` feature + the bash repo mounted
+- **For marketplace/plugin development**, mount your `compusib/ai` checkout at
+  `/workspace/compusib/ai` (the `pluginMarketplaceLocalOverride` default): the
+  feature points Claude at your working tree instead of the published git
+  marketplace, so edits show up on the next start with no push/pull.
 
-`rcloneops` is **not** bundled by this feature. It ships in the compusib bash
-repo (`bin/rcloneops`, origin `git@github.com:compusib/bash.git`) and reaches
-`PATH` only via the **`bashrc`** feature
-(`ghcr.io/compusib/devcontainer_features/bashrc`), which this feature declares in
-`dependsOn` so it is installed automatically.
+- **Bake the system packages into your image** so they aren't reinstalled on
+  every rebuild, then set `skipInstallSystemPackages: true`. `jq` is in Debian's
+  repos; `rclone` must be **>= 1.66** (newer than apt's), so use the official
+  script; `gh` needs GitHub's apt repo:
 
-The `bashrc` feature does **not** clone the bash repo — it expects the repo to be
-**mounted into the container** at its `compusibBashRepoRoot` (default
-`/workspace/compusib/bash`). That mount is what puts `bin/rcloneops` on `PATH`
-and points `BASH_LIB_DIR` at the repo's `lib/` (so `rcloneops` can source its
-sync library). Without the mount, `rcloneops` is absent and the sync step is
-skipped.
-
-### Putting `claude` on `PATH`
-
-The VS Code "Claude Code" extension ships a native `claude` binary but does not
-put it on `PATH`, and it installs at *attach* time under a directory whose name
-carries the extension version and CPU arch, e.g.
-`~/.vscode-server/extensions/anthropic.claude-code-<version>-<arch>/resources/native-binary/claude`.
-
-So at build time the feature drops a `~/.bashrc.d/190_claude_path.sh` fragment
-that resolves that binary with a glob (newest version wins) and prepends its
-directory to `PATH` when no `claude` is already reachable. This is what lets
-`bootstrap-claude-sync` find `claude` and install the configured plugins. A
-real, separately-installed `claude` CLI on `PATH` always takes precedence and is
-left untouched.
-
-The fragment lands in `~/.bashrc.d` only when the **`bashrc`** feature created
-that directory (it is a `dependsOn`); otherwise the same setup is appended to
-`~/.bashrc`.
-
-### Required tools
-
-`bootstrap-claude-sync` uses `claude` (for the best-effort plugin fast path),
-`jq` (to merge the `SessionStart` plugin hook into `settings.json`), and
-`rcloneops` (for sync; which itself needs `rclone` and `jq` — see above). The
-sync and fast-path steps no-op cleanly when their tool is absent, and the plugin
-hook still makes plugins install on the first real `claude` launch, so the attach
-never fails.
+  ```dockerfile
+  RUN apt-get update \
+   && apt-get install -y --no-install-recommends jq curl unzip ca-certificates \
+   && curl -fsSL https://rclone.org/install.sh | bash \
+   && install -m 0755 -d /etc/apt/keyrings \
+   && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/gh.gpg \
+   && chmod go+r /etc/apt/keyrings/gh.gpg \
+   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/gh.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/gh.list \
+   && apt-get update && apt-get install -y --no-install-recommends gh \
+   && rm -rf /var/lib/apt/lists/*
+  ```
 
 
 ---
 
-_Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/compusib/devcontainer_features/blob/main/src/claude/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
+_Note: This file was auto-generated from the [devcontainer-feature.json](devcontainer-feature.json).  Add additional notes to a `NOTES.md`._

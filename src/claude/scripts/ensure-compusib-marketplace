@@ -1,0 +1,140 @@
+#!/bin/bash
+#
+# Configure the compusib Claude plugin marketplace declaratively, before Claude
+# starts. Writes ~/.claude/settings.json with `jq` only — it does NOT use the
+# `claude` CLI, so it can run from a devcontainer lifecycle hook (postStart)
+# that completes before the VS Code extension's `claude` binary ever loads.
+#
+# It registers exactly one marketplace named "compusib" and enables the
+# configured plugins, choosing the marketplace SOURCE by whether a local
+# checkout is mounted:
+#   - PLUGIN_MARKETPLACE_LOCAL_OVERRIDE is a directory holding
+#     .claude-plugin/marketplace.json  -> a local `directory` source
+#   - otherwise                        -> the online `git` source
+# Claude reconciles `extraKnownMarketplaces` + `enabledPlugins` at startup and
+# installs the plugins itself.
+
+set -uo pipefail
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+
+# Defaults; overridden by config.env written at install time.
+PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
+PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="/workspace/compusib/ai"
+CLAUDE_PLUGINS=""
+# shellcheck source=/dev/null
+[[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
+
+MARKETPLACE="compusib"
+SETTINGS_FILE="${HOME}/.claude/settings.json"
+PLUGINS_DIR="${HOME}/.claude/plugins"
+
+log() { echo "🔧 [ensure-compusib-marketplace] $*"; }
+
+# Nothing configured → nothing to do.
+[[ -z "$CLAUDE_PLUGINS" ]] && exit 0
+
+# jq is a feature dependency. Without it we cannot edit settings.json safely;
+# log and exit 0 so the postStart hook never fails.
+if ! command -v jq >/dev/null 2>&1; then
+    log "⚠️  jq not on PATH; cannot configure marketplace. Skipping."
+    exit 0
+fi
+
+# The settings.json transform (function defs + program) lives in a sibling .jq
+# file to keep this script readable. Resolve it from the installed lib dir first,
+# then next to this script (running from the source tree).
+JQ_TRANSFORM=""
+for cand in \
+    "${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/ensure-compusib-marketplace.jq" \
+    "$(dirname "$(readlink -f "$0")")/ensure-compusib-marketplace.jq"; do
+    [[ -f "$cand" ]] && { JQ_TRANSFORM="$cand"; break; }
+done
+if [[ -z "$JQ_TRANSFORM" ]]; then
+    log "⚠️  ensure-compusib-marketplace.jq not found; cannot configure marketplace. Skipping."
+    exit 0
+fi
+
+# Decide the marketplace source. A local override only wins when it actually
+# contains a marketplace manifest — a bare/half-populated mount falls back to
+# the online source rather than registering a broken `directory` source.
+if [[ -n "$PLUGIN_MARKETPLACE_LOCAL_OVERRIDE" \
+      && -f "${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}/.claude-plugin/marketplace.json" ]]; then
+    src="directory"
+    path="${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}"
+    url=""
+    log "local marketplace mounted at ${path} — using a directory source."
+else
+    src="git"
+    url="$PLUGIN_MARKETPLACE"
+    path=""
+    log "no local marketplace mount — using the online git source (${url})."
+fi
+
+# Atomic JSON write-back helper.
+write_json() {
+    local file="$1" content="$2" tmp
+    mkdir -p "$(dirname "$file")"
+    tmp="$(mktemp)"
+    printf '%s\n' "$content" > "$tmp" && mv "$tmp" "$file"
+}
+
+# Claude's runtime marketplace state lives in ~/.claude/plugins (the resolved
+# known_marketplaces.json + the marketplaces/<name> clone). It is NOT
+# auto-re-resolved when a marketplace's source *type* changes (git<->directory),
+# so on a flip the stale cache shadows the settings.json change. Prune only the
+# compusib-scoped cache so Claude re-resolves cleanly from settings.json. This is
+# removal-only and compusib-scoped, so it is safe even if Claude would reconcile.
+prune_compusib_cache() {
+    log "marketplace source changed — pruning stale compusib plugin cache."
+    rm -rf "${PLUGINS_DIR}/marketplaces/${MARKETPLACE}" \
+           "${PLUGINS_DIR}/cache/${MARKETPLACE}"
+
+    local known="${PLUGINS_DIR}/known_marketplaces.json"
+    if [[ -s "$known" ]]; then
+        local pruned
+        pruned="$(jq --arg m "$MARKETPLACE" 'del(.[$m])' "$known" 2>/dev/null)" \
+            && write_json "$known" "$pruned"
+    fi
+
+    local installed="${PLUGINS_DIR}/installed_plugins.json"
+    if [[ -s "$installed" ]]; then
+        local pruned
+        pruned="$(jq --arg m "@${MARKETPLACE}" \
+            '.plugins |= with_entries(select(.key | endswith($m) | not))' \
+            "$installed" 2>/dev/null)" \
+            && write_json "$installed" "$pruned"
+    fi
+}
+
+# Detect a source flip from the previously-written settings (no marker file
+# needed — settings.json is the declaration we own, host-local and unsynced).
+old_kind=""
+[[ -s "$SETTINGS_FILE" ]] && old_kind="$(jq -r \
+    --arg m "$MARKETPLACE" \
+    '.extraKnownMarketplaces[$m].source.source // empty' \
+    "$SETTINGS_FILE" 2>/dev/null || true)"
+if [[ -n "$old_kind" && "$old_kind" != "$src" ]]; then
+    prune_compusib_cache
+fi
+
+# Plugin tokens are space-separated "<name>@<marketplace>"; feed them to jq as a
+# newline-joined string so each becomes an enabledPlugins key verbatim.
+plugins="$(printf '%s\n' $CLAUDE_PLUGINS)"
+
+current="{}"
+[[ -s "$SETTINGS_FILE" ]] && current="$(cat "$SETTINGS_FILE")"
+
+merged="$(printf '%s' "$current" | jq \
+    --arg m "$MARKETPLACE" \
+    --arg src "$src" \
+    --arg url "$url" \
+    --arg path "$path" \
+    --arg plugins "$plugins" \
+    -f "$JQ_TRANSFORM")" \
+    || { log "⚠️  failed to merge settings.json (invalid JSON?)."; exit 0; }
+
+write_json "$SETTINGS_FILE" "$merged"
+log "✅ compusib marketplace (${src}) and enabledPlugins written to ${SETTINGS_FILE}."
+
+exit 0

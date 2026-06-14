@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -48,7 +48,12 @@
         "pluginMarketplace": {
             "type": "string",
             "default": "git@github.com:compusib/ai.git",
-            "description": "Claude Code plugin marketplace registered (via 'claude plugin marketplace add') before installing claudePlugins. SSH form by default (relies on SSH-agent forwarding)."
+            "description": "Online (git) source for the compusib Claude Code plugin marketplace. Written declaratively into ~/.claude/settings.json (extraKnownMarketplaces) at postStart by ensure-compusib-marketplace; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding)."
+        },
+        "pluginMarketplaceLocalOverride": {
+            "type": "string",
+            "default": "/workspace/compusib/ai",
+            "description": "Directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source."
         },
         "bootstrapClaudeSync": {
             "type": "boolean",
@@ -64,6 +69,6 @@
             "extensions": []
         }
     },
-    "postStartCommand": "install-settings-bridge || true",
+    "postStartCommand": "install-settings-bridge || true; ensure-compusib-marketplace || true",
     "postAttachCommand": "bootstrap-claude-sync || true"
 }
