@@ -49,7 +49,10 @@
       "Bash(git rm *)",
       "Bash(git commit *)",
       "Bash(git check-ignore *)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(git stash *)",
+      "Bash(git --no-pager diff --stat .claude/settings.json)",
+      "Bash(git --no-pager diff .claude/settings.json)"
     ],
     "additionalDirectories": [
       "/workspace/compusib/bash/args",
