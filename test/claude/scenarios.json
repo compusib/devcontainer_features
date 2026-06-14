@@ -11,6 +11,7 @@
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "claude": {
+                "installSettingsBridge": false,
                 "pluginMarketplaceLocalOverride": "/tmp/compusib-no-marketplace"
             }
         }
@@ -19,6 +20,7 @@
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "claude": {
+                "installSettingsBridge": false,
                 "pluginMarketplaceLocalOverride": "/tmp/compusib-marketplace"
             }
         }
@@ -27,7 +29,8 @@
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "claude": {
-                "settingsBridgeRepoPath": "/tmp/sb-local-tree"
+                "settingsBridgeRepoPath": "/tmp/sb-local-tree",
+                "settingsBridgeRepo": "/tmp/sb-no-remote-repo"
             }
         }
     },
@@ -35,8 +38,7 @@
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "claude": {
-                "settingsBridgeRepoPath": "/tmp/sb-no-local-tree",
-                "settingsBridgeRepo": "/tmp/sb-seed-repo"
+                "settingsBridgeRepoPath": "/tmp/sb-no-local-tree"
             }
         }
     }

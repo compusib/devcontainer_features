@@ -97,6 +97,11 @@ trap cleanup EXIT
 log "fetching ${EXTENSION_ID} from ${SETTINGS_BRIDGE_REPO} (${SETTINGS_BRIDGE_REF})"
 tmp="$(mktemp -d)"
 # Shallow + sparse clone so we only pull the vsix directory, using the container's git auth.
+# This runs non-interactively at postStart: a freshly built container has no github.com entry
+# in known_hosts, so an SSH remote would otherwise block on the host-key prompt. accept-new
+# auto-trusts the host on first contact (still rejecting a *changed* key) — auth itself is
+# unaffected and still relies on the container's forwarded SSH agent / credential helper.
+GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new}" \
 git clone --depth 1 --branch "$SETTINGS_BRIDGE_REF" --filter=blob:none --sparse \
     "$SETTINGS_BRIDGE_REPO" "$tmp"
 git -C "$tmp" sparse-checkout set "$SETTINGS_BRIDGE_VSIX_DIR"
