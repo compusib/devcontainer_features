@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",

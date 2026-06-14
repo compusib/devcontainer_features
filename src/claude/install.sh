@@ -170,6 +170,7 @@ FEATURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 scripts_to_install=(
     "install-settings-bridge"
     "bootstrap-claude-sync"
+    "ensure-claude-plugins"
 )
 for script in "${scripts_to_install[@]}"; do
     if [[ -f "${FEATURE_DIR}/scripts/${script}" ]]; then
