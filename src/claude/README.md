@@ -93,30 +93,13 @@ to `true` so the feature does not attempt to install them at build time:
 
 On `postAttachCommand`, the feature runs `bootstrap-claude-sync`, which:
 
-1. **Ensures the plugin marketplace + plugins are installed.** The actual install
-   is done by `ensure-claude-plugins`, which registers `pluginMarketplace`
-   (default `git@github.com:compusib/ai.git`) with `claude plugin marketplace add`
-   and installs each plugin in `claudePlugins` (default `base-stack@compusib`).
-   It is idempotent and **marker-gated** (`~/.claude/.plugins-ensured`, keyed on
-   the marketplace + plugin set), so it is cheap to re-run.
-
-   Because the bundled `claude` binary ships with the VS Code "Claude Code"
-   extension — which installs at *attach* time and **races** this command — a
-   single `postAttach` attempt is unreliable. So `bootstrap-claude-sync` both:
-   - calls `ensure-claude-plugins` directly as a **best-effort fast path** (a
-     no-op when `claude` is not yet on `PATH` — no warning), and
-   - installs a Claude **`SessionStart` hook** that runs `ensure-claude-plugins`
-     the first time `claude` actually runs, where `claude` is guaranteed on
-     `PATH`. This is the race-free path and the one that works in headless
-     (non-VS-Code) containers too.
-
-   > Plugins installed by `claude plugin install` take effect on the **next**
-   > session, so the first launch installs them and the second has them active
-   > (unless the fast path already installed them on attach).
-
-   The hook is merged idempotently into `~/.claude/settings.json` alongside the
-   `rcloneops` sync hooks (each matches a different command), preserving every
-   other key.
+1. **Ensures the plugin marketplace + plugins are installed.** It registers
+   `pluginMarketplace` (default `git@github.com:compusib/ai.git`) with
+   `claude plugin marketplace add`, then installs each plugin in `claudePlugins`
+   (default `base-stack@compusib`). Idempotent; skips cleanly if the `claude`
+   CLI is absent. The feature puts the VS Code "Claude Code" extension's bundled
+   `claude` binary on `PATH` (see [Putting `claude` on `PATH`](#putting-claude-on-path)),
+   so this step normally runs even without a separately-installed CLI.
 2. **Provisions data sync for `~/.claude`** via
    `rcloneops claude-bootstrap --no-dry-run` (establishes the bisync baseline and
    installs `SessionStart`/`SessionEnd` sync hooks). Needs the B2 credentials in
@@ -185,12 +168,9 @@ that directory (it is a `dependsOn`); otherwise the same setup is appended to
 
 ### Required tools
 
-`bootstrap-claude-sync` uses `claude` (for the best-effort plugin fast path),
-`jq` (to merge the `SessionStart` plugin hook into `settings.json`), and
-`rcloneops` (for sync; which itself needs `rclone` and `jq` — see above). The
-sync and fast-path steps no-op cleanly when their tool is absent, and the plugin
-hook still makes plugins install on the first real `claude` launch, so the attach
-never fails.
+`bootstrap-claude-sync` uses `claude` (for plugins) and `rcloneops` (for sync;
+which itself needs `rclone` and `jq` — see above). Each step is skipped with a
+warning if its tool is not on `PATH`, so the attach never fails.
 
 
 ---
