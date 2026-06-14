@@ -193,25 +193,11 @@ else
     echo "⚠️  ensure-compusib-marketplace.jq not found in ${FEATURE_DIR}/scripts/"
 fi
 
-# Put the VS Code extension's bundled `claude` binary on PATH via a ~/.bashrc.d
-# fragment. The extension installs at attach time under a version/arch-specific
-# directory, so the fragment resolves the binary dynamically when sourced (see
-# scripts/claude-path.sh). This is what lets bootstrap-claude-sync find `claude`
-# and actually install the configured plugins. Mirror the bashrc.d-vs-.bashrc
-# fallback the other features use.
-CLAUDE_PATH_FRAGMENT="190_claude_path.sh"
-if [[ -f "${FEATURE_DIR}/scripts/claude-path.sh" ]]; then
-    if [[ -d "${_REMOTE_USER_HOME}/.bashrc.d" ]]; then
-        echo "🔧 Installing ${CLAUDE_PATH_FRAGMENT} to ${_REMOTE_USER_HOME}/.bashrc.d/"
-        cp "${FEATURE_DIR}/scripts/claude-path.sh" "${_REMOTE_USER_HOME}/.bashrc.d/${CLAUDE_PATH_FRAGMENT}"
-        chown "${_REMOTE_USER}" "${_REMOTE_USER_HOME}/.bashrc.d/${CLAUDE_PATH_FRAGMENT}"
-    else
-        echo "🔧 ${_REMOTE_USER_HOME}/.bashrc.d not found — appending claude PATH setup to ${_REMOTE_USER_HOME}/.bashrc"
-        cat "${FEATURE_DIR}/scripts/claude-path.sh" >> "${_REMOTE_USER_HOME}/.bashrc"
-    fi
-else
-    echo "⚠️  scripts/claude-path.sh not found in ${FEATURE_DIR}/scripts/ — 'claude' will not be added to PATH."
-fi
+# Putting the VS Code extension's bundled `claude` binary on PATH is handled by
+# the compusib bash repo's bashrc fragment (lib/bashrc/106_claude_path_vscode_plugin.sh),
+# installed via the `bashrc` feature (a dependsOn). This feature no longer needs
+# `claude` on PATH at all — marketplace setup is declarative (jq) and data sync
+# uses rcloneops.
 
 # Persist the resolved options so the runtime (postStart/postAttach) helpers can read them.
 # No secrets are stored here, only configuration.

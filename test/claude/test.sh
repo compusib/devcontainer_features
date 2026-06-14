@@ -120,26 +120,4 @@ check "bootstrap-claude-sync installs no plugin SessionStart hook" bash -c '
     [ ! -f "$s" ] || ! jq -e ".hooks.SessionStart[]?.hooks[]? | select((.command // \"\") | test(\"ensure-(compusib-marketplace|claude-plugins)\"))" "$s" >/dev/null
 '
 
-# --- claude on PATH ----------------------------------------------------------
-
-# The build step installs the claude PATH fragment (to ~/.bashrc.d when the
-# bashrc feature created it, otherwise appended to ~/.bashrc).
-check "claude PATH setup installed" bash -c '
-    test -f "$HOME/.bashrc.d/190_claude_path.sh" || grep -q "anthropic.claude-code" "$HOME/.bashrc"
-'
-
-# Functional: a bundled VS Code extension binary on the expected path is resolved
-# onto PATH by the fragment (newest version wins, no real CLI needed).
-check "claude-path fragment resolves the bundled extension binary" bash -c '
-    frag="$HOME/.bashrc.d/190_claude_path.sh"
-    [ -f "$frag" ] || { echo "no bashrc.d fragment present; skipping functional check"; exit 0; }
-    fakedir="$HOME/.vscode-server/extensions/anthropic.claude-code-9.9.9-test/resources/native-binary"
-    mkdir -p "$fakedir"
-    printf "#!/bin/sh\necho fake-claude\n" > "$fakedir/claude"
-    chmod +x "$fakedir/claude"
-    ( PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      . "$frag"
-      command -v claude | grep -q "anthropic.claude-code-9.9.9-test/resources/native-binary/claude" )
-'
-
 reportResults
