@@ -51,7 +51,7 @@ bootstrap_sync() {
         return 0
     fi
 
-    log "running 'rcloneops claude-bootstrap' (baseline + session hooks)."
+    log "running 'rcloneops claude-bootstrap' (bisync baseline)."
     rcloneops claude-bootstrap --no-dry-run \
         || log "⚠️  'rcloneops claude-bootstrap' returned non-zero (missing B2 credentials?)."
 }
