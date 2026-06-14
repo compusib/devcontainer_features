@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -58,7 +58,7 @@
         "bootstrapClaudeSync": {
             "type": "boolean",
             "default": true,
-            "description": "Run 'rcloneops claude-bootstrap' on attach to provision Claude data sync for ~/.claude (bisync baseline + session hooks against Backblaze B2). Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely."
+            "description": "Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely."
         }
     },
     "dependsOn": {
