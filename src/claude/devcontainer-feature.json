@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.5.1",
+    "version": "0.6.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -13,7 +13,7 @@
         "skipInstallSystemPackages": {
             "type": "boolean",
             "default": false,
-            "description": "Skip the fallback installation of system packages (rclone, jq, gh) the feature relies on. Set to true when those packages are baked into your devcontainer's Dockerfile so the feature does not try to install them at build time."
+            "description": "Skip the fallback installation of system packages (rclone, gh) the feature relies on. Set to true when those packages are baked into your devcontainer's Dockerfile so the feature does not try to install them at build time."
         },
         "settingsBridgeRepoPath": {
             "type": "string",
@@ -43,12 +43,12 @@
         "claudePlugins": {
             "type": "string",
             "default": "base-stack@compusib",
-            "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none."
+            "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none."
         },
         "pluginMarketplace": {
             "type": "string",
             "default": "git@github.com:compusib/ai.git",
-            "description": "Online (git) source for the compusib Claude Code plugin marketplace. Written declaratively into ~/.claude/settings.json (extraKnownMarketplaces) at postStart by ensure-compusib-marketplace; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding)."
+            "description": "Online (git) source for the compusib Claude Code plugin marketplace. Registered at session launch by claude-process-wrapper via 'claude plugin marketplace add'; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding)."
         },
         "pluginMarketplaceLocalOverride": {
             "type": "string",
@@ -66,9 +66,12 @@
     },
     "customizations": {
         "vscode": {
-            "extensions": []
+            "extensions": [],
+            "settings": {
+                "claudeCode.claudeProcessWrapper": "/usr/local/bin/claude-process-wrapper"
+            }
         }
     },
-    "postStartCommand": "install-settings-bridge || true; ensure-compusib-marketplace || true",
+    "postStartCommand": "install-settings-bridge || true",
     "postAttachCommand": "bootstrap-claude-sync || true"
 }

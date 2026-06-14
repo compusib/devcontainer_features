@@ -1,0 +1,28 @@
+#!/bin/bash
+# Set as claudeCode.claudeProcessWrapper. The extension spawns:
+#     claude-process-wrapper <claude-binary> [session args...]
+# This is the only point that's both before plugin hooks load and has a working
+# claude in hand, so install plugins here, then exec the session.
+# Best-effort: never block or fail the launch. (node+cli.js fallback: $1 != the
+# binary; exec "$@" still works, only the path-publish below is skipped.)
+
+set -uo pipefail
+CLAUDE_BIN="${1:-}"
+
+# Publish the binary's dir so shells resolve claude without globbing.
+if [[ -n "$CLAUDE_BIN" && -x "$CLAUDE_BIN" && "$(basename "$CLAUDE_BIN")" == claude ]]; then
+    bindir="$(cd "$(dirname "$CLAUDE_BIN")" 2>/dev/null && pwd)" || bindir=""
+    if [[ -n "$bindir" ]]; then
+        frag="${HOME}/.bashrc.d/107_claude_bin_path.sh"
+        line="export PATH=\"${bindir}:\$PATH\""
+        mkdir -p "${HOME}/.bashrc.d"
+        grep -qxF "$line" "$frag" 2>/dev/null \
+            || printf '#!/usr/bin/env bash\n# written by claude-process-wrapper\n%s\n' "$line" > "$frag" 2>/dev/null || true
+    fi
+fi
+
+# Install the plugin closure with the same binary the session will use.
+CLAUDE_BIN="$CLAUDE_BIN" ensure-marketplace-recursively-installed \
+    >>"${HOME}/.claude/plugin-setup.log" 2>&1 || true
+
+exec "$@"

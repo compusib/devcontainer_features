@@ -1,0 +1,88 @@
+#!/bin/bash
+# Install CLAUDE_PLUGINS (+ their full dependency closure) via the claude CLI.
+# Invoked by claude-process-wrapper with the session's binary in CLAUDE_BIN (else
+# resolves one). No jq: the CLI owns marketplace/plugin state. Never fails caller.
+#
+# `claude plugin install X` resolves X's direct deps, but a dep it auto-installs
+# gets only its FIRST dep (2.1.143–2.1.177; docs claim transitive — see
+# anthropics/claude-code#68449). So install the roots, then re-install each
+# installed plugin explicitly, looping until none are new (base-stack -> base ->
+# rclone, ...).
+
+set -uo pipefail
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
+PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="/workspace/compusib/ai"
+CLAUDE_PLUGINS=""
+# shellcheck source=/dev/null
+[[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
+
+log() { echo "🔧 [ensure-marketplace-recursively-installed] $*"; }
+
+[[ -z "$CLAUDE_PLUGINS" ]] && exit 0
+
+# Marketplace name = the @<marketplace> suffix of the first plugin (not hardcoded).
+first_plugin="${CLAUDE_PLUGINS%% *}"
+MARKETPLACE="${first_plugin##*@}"
+[[ -n "$MARKETPLACE" && "$MARKETPLACE" != "$first_plugin" ]] || {
+    log "⚠️  '${first_plugin}' has no @<marketplace> suffix; skipping."; exit 0; }
+
+# Resolve claude: prefer CLAUDE_BIN (wrapper), else PATH / ~/.local/bin / a
+# ~/.bashrc.d sweep (lifecycle hooks run via /bin/sh -c, no ~/.bashrc).
+resolve_claude() {
+    command -v claude 2>/dev/null && return 0
+    [[ -x "${HOME}/.local/bin/claude" ]] && { printf '%s\n' "${HOME}/.local/bin/claude"; return 0; }
+    [[ -d "$HOME/.bashrc.d" ]] && { set +u; shopt -s nullglob
+        for f in "$HOME"/.bashrc.d/*.sh; do . "$f" >/dev/null 2>&1 || true; done
+        shopt -u nullglob; set -u; }
+    command -v claude 2>/dev/null
+}
+if [[ -n "${CLAUDE_BIN:-}" && -x "${CLAUDE_BIN}" ]]; then :; else
+    CLAUDE_BIN="$(resolve_claude)" || { log "⚠️  claude not found; skipping."; exit 0; }
+fi
+
+# Source: local checkout wins only if it holds a manifest. `marketplace add` is
+# idempotent and re-clones on a flip, so no cache pruning needed.
+if [[ -n "$PLUGIN_MARKETPLACE_LOCAL_OVERRIDE" \
+      && -f "${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}/.claude-plugin/marketplace.json" ]]; then
+    SOURCE="${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}"
+else
+    SOURCE="$PLUGIN_MARKETPLACE"
+fi
+log "marketplace source: ${SOURCE}"
+
+# Sentinel: runs every launch, but the work is needed once per (plugins,source,
+# version). Skip when unchanged so steady-state launches are instant. Host-local.
+SENTINEL="${HOME}/.claude/.plugins-ensured"
+sig="${CLAUDE_PLUGINS}|${SOURCE}|$("$CLAUDE_BIN" --version 2>/dev/null || echo '?')"
+[[ -f "$SENTINEL" && "$(cat "$SENTINEL" 2>/dev/null)" == "$sig" ]] && exit 0
+
+"$CLAUDE_BIN" plugin marketplace add "$SOURCE" 2>&1 | sed 's/^/    /' || true
+"$CLAUDE_BIN" plugin marketplace update "$MARKETPLACE" >/dev/null 2>&1 || true
+
+installed_plugins() { "$CLAUDE_BIN" plugin list 2>/dev/null | grep -oE "[a-z0-9-]+@${MARKETPLACE}" | sort -u; }
+
+seen=" "
+for plugin in $CLAUDE_PLUGINS; do
+    "$CLAUDE_BIN" plugin install "$plugin" >/dev/null 2>&1 || log "⚠️  install ${plugin} failed."
+    seen="${seen}${plugin} "
+done
+
+pass=0
+while :; do
+    pass=$((pass + 1)); progressed=0
+    while IFS= read -r plugin; do
+        [[ -n "$plugin" ]] || continue
+        case "$seen" in *" ${plugin} "*) continue ;; esac
+        seen="${seen}${plugin} "
+        "$CLAUDE_BIN" plugin install "$plugin" >/dev/null 2>&1 || true
+        progressed=1
+    done <<< "$(installed_plugins)"
+    [[ "$progressed" -eq 0 ]] && break
+    [[ "$pass" -ge 10 ]] && { log "⚠️  deps unsettled after ${pass} passes."; break; }
+done
+
+printf '%s' "$sig" > "$SENTINEL" 2>/dev/null || true
+log "✅ installed: $(installed_plugins | tr '\n' ' ')"
+exit 0

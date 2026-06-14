@@ -1,36 +1,46 @@
 ## What it does
 
-On every container start (`postStartCommand`), `ensure-compusib-marketplace`
-writes `~/.claude/settings.json` with `jq` so Claude installs the compusib
-plugins itself — no `claude` binary, no session hook:
+The feature sets `claudeCode.claudeProcessWrapper` (via
+`customizations.vscode.settings`) to `claude-process-wrapper`. The extension
+spawns it with its bundled `claude` as `$1`, just before a session — the only
+point before plugin hooks load that has `claude` in hand. The wrapper:
 
-- **`extraKnownMarketplaces.compusib`** — the marketplace source.
-- **`enabledPlugins`** — every plugin in `claudePlugins` (default `base-stack@compusib`).
+1. writes `$1`'s dir to `~/.bashrc.d/107_claude_bin_path.sh` (shells resolve
+   `claude` without globbing);
+2. runs `ensure-marketplace-recursively-installed` with that binary:
+   `claude plugin marketplace add <source>` + `claude plugin install` of
+   `claudePlugins` (no `jq`);
+3. `exec`s the session.
 
-The source follows whether a local checkout is mounted:
+Install finishes before `exec`, so hooks load in that session. A sentinel
+(`~/.claude/.plugins-ensured`, keyed on plugins+source+version) skips the work on
+later launches. Source: `pluginMarketplaceLocalOverride` (a mounted checkout
+holding `.claude-plugin/marketplace.json`) → `directory`, else `pluginMarketplace` git.
 
-- **`pluginMarketplaceLocalOverride`** (default `/workspace/compusib/ai`) holds a
-  `.claude-plugin/marketplace.json` → a **local `directory`** source.
-- otherwise → the **online `git`** source (**`pluginMarketplace`**).
+> `claude plugin install` resolves a plugin's direct deps, but a dep it
+> *auto-installs* gets only its **first** dep resolved (2.1.143–2.1.177,
+> anthropics/claude-code#68449). So the script re-installs each installed plugin
+> explicitly, looping until none are new — pulling the full closure
+> (`base-stack → base → rclone`).
 
-It is re-evaluated each start; flipping between local and online re-resolves cleanly.
-
-On attach (`postAttachCommand`), `bootstrap-claude-sync` syncs `~/.claude` to
-Backblaze B2 via `rcloneops` (disable with `bootstrapClaudeSync: false`).
+On attach (`postAttachCommand`), `bootstrap-claude-sync` establishes the
+`~/.claude` ↔ Backblaze B2 bisync baseline via `rcloneops` (disable with
+`bootstrapClaudeSync: false`). The session-sync hooks themselves ship in the
+`rclone` plugin (a dependency pulled in above), not from this feature.
 
 ## Requirements
 
-- **Data sync** needs the **`bashrc`** feature (a `dependsOn`, installed
-  automatically) plus the compusib **bash repo mounted** at `compusibBashRepoRoot`
-  (default `/workspace/compusib/bash`) — that is what puts `rcloneops` on `PATH`.
-  Without it, sync is skipped.
-- **B2 credentials** in the container env (forward from the host as **secrets** —
-  never commit them): `DEVCONTAINERS_B2_ACCOUNT`, `DEVCONTAINERS_B2_KEY`,
-  `DEVCONTAINERS_B2_BUCKET`, and an email via `DEVCONTAINER_USER_EMAIL` (falls
-  back to `GIT_AUTHOR_EMAIL`). Missing credentials → sync is skipped; the attach
-  never fails.
-- **System packages** `rclone` (**>= 1.66**), `jq`, `gh`. Missing ones are
-  installed at build time (with a warning), unless `skipInstallSystemPackages`.
+- **Mount the compusib bash repo** at `compusibBashRepoRoot` (default
+  `/workspace/compusib/bash`) and keep the **`bashrc`** feature (a `dependsOn`,
+  auto-installed). They put `rcloneops` on `PATH`; data sync uses it, and is
+  skipped without it.
+- **Set the B2 credentials** in the container env, as secrets (never commit):
+  `DEVCONTAINERS_B2_ACCOUNT`, `DEVCONTAINERS_B2_KEY`, `DEVCONTAINERS_B2_BUCKET`,
+  plus an email via `DEVCONTAINER_USER_EMAIL` (or `GIT_AUTHOR_EMAIL`). Missing →
+  sync is skipped; the attach never fails.
+- **Provide `rclone` (>= 1.66) and `gh`** — the feature installs missing ones at
+  build time (with a warning) unless `skipInstallSystemPackages`. No `jq` or
+  `claude` is required (the wrapper drives the extension's bundled `claude`).
 
 ```jsonc
 "containerEnv": {
@@ -48,13 +58,13 @@ Backblaze B2 via `rcloneops` (disable with `bootstrapClaudeSync: false`).
   marketplace, so edits show up on the next start with no push/pull.
 
 - **Bake the system packages into your image** so they aren't reinstalled on
-  every rebuild, then set `skipInstallSystemPackages: true`. `jq` is in Debian's
-  repos; `rclone` must be **>= 1.66** (newer than apt's), so use the official
-  script; `gh` needs GitHub's apt repo:
+  every rebuild, then set `skipInstallSystemPackages: true`. `rclone` must be
+  **>= 1.66** (newer than apt's), so use the official script; `gh` needs
+  GitHub's apt repo:
 
   ```dockerfile
   RUN apt-get update \
-   && apt-get install -y --no-install-recommends jq curl unzip ca-certificates \
+   && apt-get install -y --no-install-recommends curl unzip ca-certificates \
    && curl -fsSL https://rclone.org/install.sh | bash \
    && install -m 0755 -d /etc/apt/keyrings \
    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/gh.gpg \
