@@ -16,6 +16,7 @@ SETTINGS_BRIDGE_VSIX_DIR="${SETTINGSBRIDGEVSIXDIR:-vscode/settings-bridge/dist}"
 EXTENSION_ID="${EXTENSIONID:-compusib.settings-bridge}"
 CLAUDE_PLUGINS="${CLAUDEPLUGINS:-base-stack@compusib}"
 PLUGIN_MARKETPLACE="${PLUGINMARKETPLACE:-git@github.com:compusib/ai.git}"
+PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="${PLUGINMARKETPLACELOCALOVERRIDE:-/workspace/compusib/ai}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAPCLAUDESYNC:-true}"
 
 # Ensure the runtime dependencies are available.
@@ -170,7 +171,7 @@ FEATURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 scripts_to_install=(
     "install-settings-bridge"
     "bootstrap-claude-sync"
-    "ensure-claude-plugins"
+    "ensure-compusib-marketplace"
 )
 for script in "${scripts_to_install[@]}"; do
     if [[ -f "${FEATURE_DIR}/scripts/${script}" ]]; then
@@ -181,6 +182,16 @@ for script in "${scripts_to_install[@]}"; do
         echo "⚠️  Script ${script} not found in ${FEATURE_DIR}/scripts/"
     fi
 done
+
+# Install the jq transform that ensure-compusib-marketplace loads (kept beside
+# config.env in the feature lib dir, not on PATH — it is a data file, not a tool).
+mkdir -p "${FEATURE_LIB_TARGET_DIR}"
+if [[ -f "${FEATURE_DIR}/scripts/ensure-compusib-marketplace.jq" ]]; then
+    echo "📦 Installing ensure-compusib-marketplace.jq to ${FEATURE_LIB_TARGET_DIR}/"
+    cp "${FEATURE_DIR}/scripts/ensure-compusib-marketplace.jq" "${FEATURE_LIB_TARGET_DIR}/"
+else
+    echo "⚠️  ensure-compusib-marketplace.jq not found in ${FEATURE_DIR}/scripts/"
+fi
 
 # Put the VS Code extension's bundled `claude` binary on PATH via a ~/.bashrc.d
 # fragment. The extension installs at attach time under a version/arch-specific
@@ -215,8 +226,10 @@ SETTINGS_BRIDGE_VSIX_DIR="${SETTINGS_BRIDGE_VSIX_DIR}"
 EXTENSION_ID="${EXTENSION_ID}"
 CLAUDE_PLUGINS="${CLAUDE_PLUGINS}"
 PLUGIN_MARKETPLACE="${PLUGIN_MARKETPLACE}"
+PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAP_CLAUDE_SYNC}"
 EOF
 
 echo "✅ claude feature installed successfully!"
-echo "   'install-settings-bridge' runs on postStart; 'bootstrap-claude-sync' runs on postAttach."
+echo "   'install-settings-bridge' and 'ensure-compusib-marketplace' run on postStart;"
+echo "   'bootstrap-claude-sync' runs on postAttach."

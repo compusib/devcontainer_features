@@ -1,7 +1,10 @@
 #!/bin/bash
 #
-# Bootstrap Claude on this container: ensure the plugin marketplace + plugins are
-# installed, and provision data sync for ~/.claude via `rcloneops claude-bootstrap`.
+# Provision data sync for ~/.claude via `rcloneops claude-bootstrap`.
+#
+# Marketplace + plugin configuration is handled separately and earlier, by
+# ensure-compusib-marketplace on postStart (declarative, jq-only, no `claude`
+# binary). This script only provisions data sync.
 #
 # Designed to run from the feature's postAttachCommand. Never fails the attach.
 
@@ -10,8 +13,6 @@ set -uo pipefail
 CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
 
 # Defaults; overridden by config.env written at install time.
-PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
-CLAUDE_PLUGINS=""
 BOOTSTRAP_CLAUDE_SYNC="true"
 # shellcheck source=/dev/null
 [[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
@@ -38,66 +39,6 @@ load_bashrc_path() {
 }
 load_bashrc_path
 
-# Best-effort plugin install on attach. The `claude` CLI ships only with the VS
-# Code extension, which installs at attach time and races this command, so when
-# it is not yet on PATH we do NOT warn — the SessionStart hook installed below
-# guarantees the install the first time `claude` actually runs.
-ensure_plugins() {
-    if [[ -z "$CLAUDE_PLUGINS" ]]; then
-        log "no claudePlugins configured; nothing to install."
-        return 0
-    fi
-    if ! command -v claude >/dev/null 2>&1; then
-        log "ℹ️  'claude' not on PATH yet (VS Code extension still installing?); the SessionStart hook will install plugins on first launch."
-        return 0
-    fi
-    log "claude present — ensuring plugins now (fast path)."
-    ensure-claude-plugins || log "⚠️  ensure-claude-plugins returned non-zero."
-}
-
-# Register a SessionStart hook that runs ensure-claude-plugins, so plugins are
-# installed the first time `claude` runs regardless of when the extension lands.
-# Merges idempotently into ~/.claude/settings.json (matching on the command),
-# preserving every other key — including the rcloneops SessionStart/SessionEnd
-# sync hooks, which match a different command. Detached so it never blocks the
-# session. Needs jq (a feature dependency); skips cleanly without it.
-install_plugin_hook() {
-    [[ -z "$CLAUDE_PLUGINS" ]] && return 0
-    if ! command -v jq >/dev/null 2>&1; then
-        log "⚠️  jq not on PATH; skipping SessionStart plugin hook install."
-        return 0
-    fi
-
-    local ensure_path
-    ensure_path="$(command -v ensure-claude-plugins || echo /usr/local/bin/ensure-claude-plugins)"
-    local cmd
-    cmd="nohup \"${ensure_path}\" </dev/null >>\"\$HOME/.claude/plugins.log\" 2>&1 &"
-
-    local settings_file="${HOME}/.claude/settings.json"
-    local current="{}"
-    [[ -s "$settings_file" ]] && current="$(cat "$settings_file")"
-
-    local merged
-    merged="$(printf '%s' "$current" | jq \
-        --arg cmd "$cmd" '
-        # A leaf hook entry that runs our ensure-claude-plugins command.
-        def is_plugins(h): ((h.command // "") | contains("ensure-claude-plugins"));
-        # Strip any prior form first (so we never duplicate), prune emptied
-        # groups, then append the desired command exactly once. Other SessionStart
-        # entries (e.g. the rcloneops sync hook) are left untouched.
-        (.hooks = (.hooks // {}))
-        | .hooks.SessionStart = (((.hooks.SessionStart // [])
-            | map(.hooks = ((.hooks // []) | map(select(is_plugins(.) | not))))
-            | map(select((.hooks // []) | length > 0)))
-            + [{"hooks": [{"type": "command", "command": $cmd}]}])
-    ')" || { log "⚠️  failed to merge plugin hook into settings.json (invalid JSON?)."; return 0; }
-
-    mkdir -p "$(dirname "$settings_file")"
-    local tmp; tmp="$(mktemp)"
-    printf '%s\n' "$merged" > "$tmp" && mv "$tmp" "$settings_file"
-    log "installed SessionStart plugin hook in ${settings_file}."
-}
-
 # Provision data sync for ~/.claude via rcloneops. Skipped when disabled or when
 # rcloneops is absent (it ships with the bashrc feature's bash repo).
 bootstrap_sync() {
@@ -115,8 +56,6 @@ bootstrap_sync() {
         || log "⚠️  'rcloneops claude-bootstrap' returned non-zero (missing B2 credentials?)."
 }
 
-ensure_plugins
-install_plugin_hook
 bootstrap_sync
 log "✅ done."
 exit 0
