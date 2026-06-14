@@ -52,7 +52,19 @@
       "Bash(echo \"exit: $?\")",
       "Bash(git stash *)",
       "Bash(git --no-pager diff --stat .claude/settings.json)",
-      "Bash(git --no-pager diff .claude/settings.json)"
+      "Bash(git --no-pager diff .claude/settings.json)",
+      "Bash(jq -r '.catalog.marketplace_sha' plugin-catalog-cache.json)",
+      "Bash(jq -r '.catalog.plugins | if type==\"array\" then .[].name else keys[] end' plugin-catalog-cache.json)",
+      "Bash(jq -r '.plugins[].name' /workspace/compusib/ai/.claude-plugin/marketplace.json)",
+      "Bash(claude plugin *)",
+      "Bash(command -v claude)",
+      "Bash(claude --version)",
+      "WebSearch",
+      "WebFetch(domain:containers.dev)",
+      "Bash(curl -s \"https://api.github.com/repos/anthropics/claude-code/pulls?state=all&per_page=100&q=plugin+dependencies\" -H \"Accept: application/vnd.github.v3+json\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(node -e 'console.log\\(Object.keys\\(require\\(\"./test/claude/scenarios.json\"\\)\\).join\\(\"\\\\n\"\\)\\)')",
+      "Bash(gh issue create --repo anthropics/claude-code --title 'claude plugin install: an auto-installed dependency resolves only its first declared dependency' --body ' *)"
     ],
     "additionalDirectories": [
       "/workspace/compusib/bash/args",
