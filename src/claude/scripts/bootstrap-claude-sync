@@ -38,28 +38,64 @@ load_bashrc_path() {
 }
 load_bashrc_path
 
-# Ensure the compusib marketplace is registered and the required plugins are
-# installed. Idempotent. Needs the `claude` CLI; skips cleanly without it.
+# Best-effort plugin install on attach. The `claude` CLI ships only with the VS
+# Code extension, which installs at attach time and races this command, so when
+# it is not yet on PATH we do NOT warn — the SessionStart hook installed below
+# guarantees the install the first time `claude` actually runs.
 ensure_plugins() {
-    if ! command -v claude >/dev/null 2>&1; then
-        log "⚠️  'claude' CLI not on PATH; skipping plugin/marketplace install."
-        return 0
-    fi
     if [[ -z "$CLAUDE_PLUGINS" ]]; then
-        log "⚠️  no claudePlugins configured; nothing to install."
+        log "no claudePlugins configured; nothing to install."
+        return 0
+    fi
+    if ! command -v claude >/dev/null 2>&1; then
+        log "ℹ️  'claude' not on PATH yet (VS Code extension still installing?); the SessionStart hook will install plugins on first launch."
+        return 0
+    fi
+    log "claude present — ensuring plugins now (fast path)."
+    ensure-claude-plugins || log "⚠️  ensure-claude-plugins returned non-zero."
+}
+
+# Register a SessionStart hook that runs ensure-claude-plugins, so plugins are
+# installed the first time `claude` runs regardless of when the extension lands.
+# Merges idempotently into ~/.claude/settings.json (matching on the command),
+# preserving every other key — including the rcloneops SessionStart/SessionEnd
+# sync hooks, which match a different command. Detached so it never blocks the
+# session. Needs jq (a feature dependency); skips cleanly without it.
+install_plugin_hook() {
+    [[ -z "$CLAUDE_PLUGINS" ]] && return 0
+    if ! command -v jq >/dev/null 2>&1; then
+        log "⚠️  jq not on PATH; skipping SessionStart plugin hook install."
         return 0
     fi
 
-    log "ensuring marketplace '${PLUGIN_MARKETPLACE}' is registered"
-    claude plugin marketplace add "$PLUGIN_MARKETPLACE" 2>/dev/null \
-        || log "⚠️  could not add marketplace (already added, or no SSH access)."
+    local ensure_path
+    ensure_path="$(command -v ensure-claude-plugins || echo /usr/local/bin/ensure-claude-plugins)"
+    local cmd
+    cmd="nohup \"${ensure_path}\" </dev/null >>\"\$HOME/.claude/plugins.log\" 2>&1 &"
 
-    local plugin
-    for plugin in $CLAUDE_PLUGINS; do
-        log "ensuring plugin '${plugin}' is installed"
-        claude plugin install "$plugin" 2>/dev/null \
-            || log "⚠️  could not install plugin '${plugin}'."
-    done
+    local settings_file="${HOME}/.claude/settings.json"
+    local current="{}"
+    [[ -s "$settings_file" ]] && current="$(cat "$settings_file")"
+
+    local merged
+    merged="$(printf '%s' "$current" | jq \
+        --arg cmd "$cmd" '
+        # A leaf hook entry that runs our ensure-claude-plugins command.
+        def is_plugins(h): ((h.command // "") | contains("ensure-claude-plugins"));
+        # Strip any prior form first (so we never duplicate), prune emptied
+        # groups, then append the desired command exactly once. Other SessionStart
+        # entries (e.g. the rcloneops sync hook) are left untouched.
+        (.hooks = (.hooks // {}))
+        | .hooks.SessionStart = (((.hooks.SessionStart // [])
+            | map(.hooks = ((.hooks // []) | map(select(is_plugins(.) | not))))
+            | map(select((.hooks // []) | length > 0)))
+            + [{"hooks": [{"type": "command", "command": $cmd}]}])
+    ')" || { log "⚠️  failed to merge plugin hook into settings.json (invalid JSON?)."; return 0; }
+
+    mkdir -p "$(dirname "$settings_file")"
+    local tmp; tmp="$(mktemp)"
+    printf '%s\n' "$merged" > "$tmp" && mv "$tmp" "$settings_file"
+    log "installed SessionStart plugin hook in ${settings_file}."
 }
 
 # Provision data sync for ~/.claude via rcloneops. Skipped when disabled or when
@@ -80,6 +116,7 @@ bootstrap_sync() {
 }
 
 ensure_plugins
+install_plugin_hook
 bootstrap_sync
 log "✅ done."
 exit 0
