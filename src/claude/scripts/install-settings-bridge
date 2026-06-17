@@ -10,9 +10,12 @@
 #      home cache and install from there.
 # The *.vsix lives at <repo-root>/$SETTINGS_BRIDGE_VSIX_DIR in both cases.
 #
-# Designed to run from the feature's postStartCommand (before the window attaches, so the
-# extension is active without a reload). It never fails startup: any skip condition (extension
-# already installed, no `code` CLI yet, no source available) exits 0.
+# Designed to run from the feature's postAttachCommand: the `code` CLI here is the remote-cli,
+# which can only register an extension by talking to a *live* VS Code server over its IPC socket
+# ($VSCODE_IPC_HOOK_CLI). That socket exists only once a window/extension-host is attached, so at
+# postStart (before attach) the install silently no-ops; postAttach is the first point it works,
+# and the extension then activates without a manual reload. It never fails startup: any skip
+# condition (extension already installed, no `code` CLI yet, no source available) exits 0.
 
 set -euo pipefail
 
