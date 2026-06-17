@@ -7,12 +7,15 @@
 # $VSCODE_IPC_HOOK_CLI (which hardened containers strip): VS Code's own installer
 # writes to the server extensions dir at connect.
 #
-# Two sources, one fixed path ($STAGE — must match customizations.vscode.extensions):
-#   1. Local working tree on disk (e.g. bind-mounted /workspace/compusib/ai):
-#      SYMLINK $STAGE -> the built vsix, so in-development rebuilds are picked up
-#      with no copy.
+# Two sources, one fixed path ($STAGE — must match customizations.vscode.extensions).
+# We COPY a real file (not a symlink): VS Code's extension installer validates the
+# real path and won't follow a symlink, so a linked vsix stages but never installs
+# (microsoft/vscode-remote-release#8827 — a filepath entry installs, with only a
+# cosmetic validation warning).
+#   1. Local working tree on disk (e.g. bind-mounted /workspace/compusib/ai): copy
+#      the built vsix to $STAGE (re-staged on each onCreate, so rebuilds propagate).
 #   2. Otherwise: shallow + sparse clone of the prebuilt vsix from git (container's
-#      own git auth) and COPY it to $STAGE.
+#      own git auth) and copy it to $STAGE.
 #
 # Designed to run from onCreateCommand: the workspace is mounted and it is BEFORE
 # extensions are configured (the vsix must exist by then). Never fails startup.
@@ -58,12 +61,13 @@ first_vsix() {
 
 mkdir -p "$STAGE_DIR" 2>/dev/null || true
 
-# 1) Local working tree -> symlink (no copy; tracks in-development rebuilds).
+# 1) Local working tree -> copy a real file to $STAGE.
 if [[ -n "$SETTINGS_BRIDGE_REPO_PATH" ]]; then
     local_vsix="$(first_vsix "${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
     if [[ -n "$local_vsix" ]]; then
-        ln -sfn "$local_vsix" "$STAGE"
-        log "✅ linked ${EXTENSION_ID}: ${STAGE} -> ${local_vsix} (VS Code installs it via customizations.vscode.extensions)"
+        rm -f "$STAGE"
+        cp -f "$local_vsix" "$STAGE"
+        log "✅ staged ${EXTENSION_ID} -> ${STAGE} (copied from ${local_vsix}; VS Code installs it via customizations.vscode.extensions)"
         exit 0
     fi
     log "no *.vsix under ${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}, falling back to clone."
