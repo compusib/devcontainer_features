@@ -1,28 +1,25 @@
 #!/bin/bash
 #
-# Install the compusib.settings-bridge VS Code extension.
+# Stage the compusib.settings-bridge *.vsix at a fixed path so VS Code installs it
+# itself, declaratively, via customizations.vscode.extensions (the feature
+# contributes that entry). This is the documented way to ship a local/private
+# extension into a dev container — no `code` CLI, no remote-cli, no
+# $VSCODE_IPC_HOOK_CLI (which hardened containers strip): VS Code's own installer
+# writes to the server extensions dir at connect.
 #
-# The source is always a working tree of the settings-bridge repo; the only question is whether
-# one is already on disk or has to be fetched:
-#   1. A local working tree already in the container (e.g. bind-mounted for extension development)
-#      -> install from it and remove any previously downloaded home cache.
-#   2. Otherwise clone the prebuilt .vsix from git (reusing the container's own git auth) into a
-#      home cache and install from there.
-# The *.vsix lives at <repo-root>/$SETTINGS_BRIDGE_VSIX_DIR in both cases.
+# Two sources, one fixed path ($STAGE — must match customizations.vscode.extensions):
+#   1. Local working tree on disk (e.g. bind-mounted /workspace/compusib/ai):
+#      SYMLINK $STAGE -> the built vsix, so in-development rebuilds are picked up
+#      with no copy.
+#   2. Otherwise: shallow + sparse clone of the prebuilt vsix from git (container's
+#      own git auth) and COPY it to $STAGE.
 #
-# Designed to run from the feature's postAttachCommand. It installs the vsix with the VS Code
-# Remote server's remote-cli (resolved by glob under ~/.vscode-server) — NOT whatever `code` is
-# first on PATH: a standalone /usr/local/bin/code shadows the remote-cli and cannot manage the
-# server's extensions (it just prints "code or code-insiders is not installed"). `--install-extension`
-# writes to the server's extensions dir and works offline — it does NOT need $VSCODE_IPC_HOOK_CLI
-# (only window-targeting commands do); the extension activates on the next window reload. It never
-# fails startup: any skip condition (already installed, no remote-cli yet, no source) exits 0.
+# Designed to run from onCreateCommand: the workspace is mounted and it is BEFORE
+# extensions are configured (the vsix must exist by then). Never fails startup.
 
 set -euo pipefail
 
 CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
-FORCE=0
-[[ "${1:-}" == "--force" ]] && FORCE=1
 
 # Defaults (overridden by the feature config written at install time).
 INSTALL_SETTINGS_BRIDGE="true"
@@ -34,42 +31,17 @@ EXTENSION_ID="compusib.settings-bridge"
 # shellcheck source=/dev/null
 [[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
 
-CACHE_DIR="$HOME/.cache/claude-feature/settings-bridge"
+# Fixed path VS Code installs from. MUST match the feature's
+# customizations.vscode.extensions entry (which can't expand $HOME, so the literal
+# there is /home/node/... — the compusib containers' remote user).
+STAGE_DIR="$HOME/.cache/claude-feature/settings-bridge"
+STAGE="$STAGE_DIR/compusib.settings-bridge.vsix"
 
 log() { echo "🔧 [settings-bridge] $*"; }
 
 if [[ "$INSTALL_SETTINGS_BRIDGE" != "true" ]]; then
     log "installSettingsBridge is disabled, skipping."
     exit 0
-fi
-
-# Resolve the VS Code Remote server's remote-cli (under ~/.vscode-server). A
-# standalone `code` on PATH (e.g. /usr/local/bin/code) can't manage the server's
-# extensions, so prefer the remote-cli and only fall back to PATH. Glob
-# newest-by-mtime so it survives VS Code commit-hash bumps.
-code_cli="$(ls -t "$HOME"/.vscode-server/bin/*/bin/remote-cli/code 2>/dev/null | head -1 || true)"
-[[ -n "$code_cli" ]] || code_cli="$(command -v code 2>/dev/null || true)"
-if [[ -z "$code_cli" ]]; then
-    log "no VS Code remote-cli available yet, skipping extension install."
-    exit 0
-fi
-log "using code CLI: ${code_cli}"
-
-# The remote-cli talks to the attached window over $VSCODE_IPC_HOOK_CLI and refuses
-# to run without it ("only available inside a VS Code terminal"). The postAttach
-# lifecycle shell doesn't inherit that var, but the socket exists (a window is
-# attached) — recover the live value from a vscode-server process's environment,
-# falling back to the newest CLI socket on disk.
-if [[ -z "${VSCODE_IPC_HOOK_CLI:-}" ]]; then
-    for _p in $(pgrep -f 'vscode-server' 2>/dev/null || true); do
-        _v="$(tr '\0' '\n' < "/proc/${_p}/environ" 2>/dev/null | sed -n 's/^VSCODE_IPC_HOOK_CLI=//p' | head -1 || true)"
-        [[ -n "$_v" ]] && { export VSCODE_IPC_HOOK_CLI="$_v"; break; }
-    done
-    if [[ -z "${VSCODE_IPC_HOOK_CLI:-}" ]]; then
-        _sock="$(ls -t /tmp/vscode-ipc-*.sock "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/vscode-ipc-*.sock 2>/dev/null | head -1 || true)"
-        [[ -n "$_sock" ]] && export VSCODE_IPC_HOOK_CLI="$_sock"
-    fi
-    [[ -n "${VSCODE_IPC_HOOK_CLI:-}" ]] && log "recovered VSCODE_IPC_HOOK_CLI=${VSCODE_IPC_HOOK_CLI}"
 fi
 
 # Return the first *.vsix in a directory, or empty if none.
@@ -84,57 +56,29 @@ first_vsix() {
     done
 }
 
-install_vsix() {
-    local vsix="$1"
-    log "installing ${EXTENSION_ID} from ${vsix}"
-    # The remote-cli can print an IPC error yet still exit 0, so don't trust the
-    # exit code — verify the extension actually registered via --list-extensions.
-    "$code_cli" --install-extension "$vsix" --force || true
-    if "$code_cli" --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
-        log "✅ installed ${EXTENSION_ID}"
-    else
-        log "⚠️  ${EXTENSION_ID} did not register — no reachable VS Code window (IPC)?"
-    fi
-}
+mkdir -p "$STAGE_DIR" 2>/dev/null || true
 
-# 1) Prefer a local working tree of the repo if one is already on disk (development workflow).
-local_vsix_dir=""
+# 1) Local working tree -> symlink (no copy; tracks in-development rebuilds).
 if [[ -n "$SETTINGS_BRIDGE_REPO_PATH" ]]; then
-    local_vsix_dir="${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}"
-fi
-if [[ -n "$local_vsix_dir" ]]; then
-    local_vsix="$(first_vsix "$local_vsix_dir")"
+    local_vsix="$(first_vsix "${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
     if [[ -n "$local_vsix" ]]; then
-        log "local working tree detected at ${SETTINGS_BRIDGE_REPO_PATH}"
-        # The extension now comes from the local tree; drop any stale downloaded copy.
-        if [[ -d "$CACHE_DIR" ]]; then
-            log "removing stale home cache ${CACHE_DIR}"
-            rm -rf "$CACHE_DIR"
-        fi
-        # Always force-install from the local tree so in-development edits propagate.
-        install_vsix "$local_vsix"
+        ln -sfn "$local_vsix" "$STAGE"
+        log "✅ linked ${EXTENSION_ID}: ${STAGE} -> ${local_vsix} (VS Code installs it via customizations.vscode.extensions)"
         exit 0
     fi
-    log "no *.vsix under ${local_vsix_dir}, falling back to clone."
+    log "no *.vsix under ${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}, falling back to clone."
 fi
 
-# 2) Download fallback. Skip the clone if the extension is already installed (unless --force).
-if [[ "$FORCE" -ne 1 ]] && "$code_cli" --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
-    log "${EXTENSION_ID} already installed, skipping download."
-    exit 0
-fi
-
+# 2) Git clone -> download + copy to $STAGE (replacing any stale symlink/file).
 tmp=""
 cleanup() { [[ -n "$tmp" && -d "$tmp" ]] && rm -rf "$tmp"; }
 trap cleanup EXIT
 
 log "fetching ${EXTENSION_ID} from ${SETTINGS_BRIDGE_REPO} (${SETTINGS_BRIDGE_REF})"
 tmp="$(mktemp -d)"
-# Shallow + sparse clone so we only pull the vsix directory, using the container's git auth.
-# This runs non-interactively at postStart: a freshly built container has no github.com entry
-# in known_hosts, so an SSH remote would otherwise block on the host-key prompt. accept-new
-# auto-trusts the host on first contact (still rejecting a *changed* key) — auth itself is
-# unaffected and still relies on the container's forwarded SSH agent / credential helper.
+# Shallow + sparse clone of just the vsix dir, using the container's git auth.
+# accept-new auto-trusts github on first contact (a fresh container has no
+# known_hosts entry); auth still relies on the forwarded SSH agent / helper.
 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new}" \
 git clone --depth 1 --branch "$SETTINGS_BRIDGE_REF" --filter=blob:none --sparse \
     "$SETTINGS_BRIDGE_REPO" "$tmp"
@@ -142,11 +86,10 @@ git -C "$tmp" sparse-checkout set "$SETTINGS_BRIDGE_VSIX_DIR"
 
 downloaded_vsix="$(first_vsix "${tmp%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
 if [[ -z "$downloaded_vsix" ]]; then
-    log "no *.vsix found under ${SETTINGS_BRIDGE_VSIX_DIR} in the repo, nothing to install."
+    log "no *.vsix found under ${SETTINGS_BRIDGE_VSIX_DIR} in the repo, nothing to stage."
     exit 0
 fi
 
-mkdir -p "$CACHE_DIR"
-cp "$downloaded_vsix" "$CACHE_DIR/"
-cached_vsix="$(first_vsix "$CACHE_DIR")"
-install_vsix "$cached_vsix"
+rm -f "$STAGE"
+cp -f "$downloaded_vsix" "$STAGE"
+log "✅ downloaded ${EXTENSION_ID} -> ${STAGE} (VS Code installs it via customizations.vscode.extensions)"

@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.8.3",
+    "version": "0.9.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -71,11 +71,14 @@
     },
     "customizations": {
         "vscode": {
-            "extensions": [],
+            "extensions": [
+                "/home/node/.cache/claude-feature/settings-bridge/compusib.settings-bridge.vsix"
+            ],
             "settings": {
                 "claudeCode.claudeProcessWrapper": "/usr/local/bin/claude-process-wrapper"
             }
         }
     },
-    "postAttachCommand": "install-settings-bridge || true; bootstrap-claude-sync || true"
+    "onCreateCommand": "install-settings-bridge || true",
+    "postAttachCommand": "bootstrap-claude-sync || true"
 }
