@@ -17,6 +17,7 @@ SETTINGS_BRIDGE_REF="${SETTINGSBRIDGEREF:-main}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGSBRIDGEVSIXDIR:-vscode/settings-bridge/dist}"
 EXTENSION_ID="${EXTENSIONID:-compusib.settings-bridge}"
 CLAUDE_PLUGINS="${CLAUDEPLUGINS:-base-stack@compusib}"
+DEFAULT_PLUGIN_CONFIGS="${DEFAULTPLUGINCONFIGS:-true}"
 PLUGIN_MARKETPLACE="${PLUGINMARKETPLACE:-git@github.com:compusib/ai.git}"
 PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="${PLUGINMARKETPLACELOCALOVERRIDE:-/workspace/compusib/ai}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAPCLAUDESYNC:-true}"
@@ -46,6 +47,10 @@ fi
 # wrapper with its own bundled binary, the wrapper installs the plugin closure
 # with that same binary (no jq, no version skew) and then execs the real session.
 install_runtime_scripts "${FEATURE_DIR}/scripts"
+
+# 2b. Install the sourced runtime libs (e.g. plugin-install.sh) next to config.env
+# so the runtime helpers can source them.
+install_runtime_libs "${FEATURE_DIR}/scripts" "${FEATURE_LIB_TARGET_DIR}"
 
 # 3. Persist the resolved options so the runtime helpers can read them.
 write_feature_config "${CONFIG_FILE}"

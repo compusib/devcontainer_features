@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -44,6 +44,11 @@
             "type": "string",
             "default": "base-stack@compusib",
             "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none."
+        },
+        "defaultPluginConfigs": {
+            "type": "boolean",
+            "default": true,
+            "description": "Before installing each plugin, seed its userConfig defaults (declared in the plugin manifest) into ~/.claude/settings.json, using the bash repo's 'manifest-to-default-user-config' (resolved via BASH_REPO_ROOT). Best-effort and idempotent: fill-only (never overwrites a value you have already set), skips plugins that declare no defaults, and silently no-ops when the helper or a manifest is unavailable. Set false to skip default seeding."
         },
         "pluginMarketplace": {
             "type": "string",

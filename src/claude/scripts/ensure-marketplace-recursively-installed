@@ -11,14 +11,24 @@
 
 set -uo pipefail
 
-CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude/config.env"
+RUNTIME_LIB_DIR="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude"
+CONFIG_FILE="${RUNTIME_LIB_DIR}/config.env"
 PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
 PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="/workspace/compusib/ai"
 CLAUDE_PLUGINS=""
+DEFAULT_PLUGIN_CONFIGS="true"
 # shellcheck source=/dev/null
 [[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
 
 log() { echo "🔧 [ensure-marketplace-recursively-installed] $*"; }
+
+# The single-plugin install operation (seed userConfig defaults, then install)
+# lives in a sourced lib — prepwork for moving the runtime scripts into the bash
+# repo. Fall back to a plain install if the lib is not present.
+# shellcheck source=/dev/null
+[[ -f "${RUNTIME_LIB_DIR}/plugin-install.sh" ]] && . "${RUNTIME_LIB_DIR}/plugin-install.sh"
+declare -F install_plugin >/dev/null 2>&1 \
+    || install_plugin() { "$1" plugin install "$2" >/dev/null 2>&1; }
 
 [[ -z "$CLAUDE_PLUGINS" ]] && exit 0
 
@@ -65,7 +75,7 @@ installed_plugins() { "$CLAUDE_BIN" plugin list 2>/dev/null | grep -oE "[a-z0-9-
 
 seen=" "
 for plugin in $CLAUDE_PLUGINS; do
-    "$CLAUDE_BIN" plugin install "$plugin" >/dev/null 2>&1 || log "⚠️  install ${plugin} failed."
+    install_plugin "$CLAUDE_BIN" "$plugin" "$MARKETPLACE" || log "⚠️  install ${plugin} failed."
     seen="${seen}${plugin} "
 done
 
@@ -76,7 +86,7 @@ while :; do
         [[ -n "$plugin" ]] || continue
         case "$seen" in *" ${plugin} "*) continue ;; esac
         seen="${seen}${plugin} "
-        "$CLAUDE_BIN" plugin install "$plugin" >/dev/null 2>&1 || true
+        install_plugin "$CLAUDE_BIN" "$plugin" "$MARKETPLACE" || true
         progressed=1
     done <<< "$(installed_plugins)"
     [[ "$progressed" -eq 0 ]] && break
