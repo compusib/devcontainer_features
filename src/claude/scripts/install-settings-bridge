@@ -10,12 +10,13 @@
 #      home cache and install from there.
 # The *.vsix lives at <repo-root>/$SETTINGS_BRIDGE_VSIX_DIR in both cases.
 #
-# Designed to run from the feature's postAttachCommand: the `code` CLI here is the remote-cli,
-# which can only register an extension by talking to a *live* VS Code server over its IPC socket
-# ($VSCODE_IPC_HOOK_CLI). That socket exists only once a window/extension-host is attached, so at
-# postStart (before attach) the install silently no-ops; postAttach is the first point it works,
-# and the extension then activates without a manual reload. It never fails startup: any skip
-# condition (extension already installed, no `code` CLI yet, no source available) exits 0.
+# Designed to run from the feature's postAttachCommand. It installs the vsix with the VS Code
+# Remote server's remote-cli (resolved by glob under ~/.vscode-server) — NOT whatever `code` is
+# first on PATH: a standalone /usr/local/bin/code shadows the remote-cli and cannot manage the
+# server's extensions (it just prints "code or code-insiders is not installed"). `--install-extension`
+# writes to the server's extensions dir and works offline — it does NOT need $VSCODE_IPC_HOOK_CLI
+# (only window-targeting commands do); the extension activates on the next window reload. It never
+# fails startup: any skip condition (already installed, no remote-cli yet, no source) exits 0.
 
 set -euo pipefail
 
@@ -42,10 +43,18 @@ if [[ "$INSTALL_SETTINGS_BRIDGE" != "true" ]]; then
     exit 0
 fi
 
-if ! command -v code >/dev/null 2>&1; then
-    log "the 'code' CLI is not available yet, skipping extension install."
+# Resolve the VS Code CLI. Prefer the Remote server's remote-cli (under
+# ~/.vscode-server): it manages the attached server's extensions and `--install-extension`
+# works offline (no $VSCODE_IPC_HOOK_CLI). A standalone `code` on PATH (e.g.
+# /usr/local/bin/code) can't, so only fall back to it. Glob newest-by-mtime so it
+# survives VS Code commit-hash bumps.
+code_cli="$(ls -t "$HOME"/.vscode-server/bin/*/bin/remote-cli/code 2>/dev/null | head -1 || true)"
+[[ -n "$code_cli" ]] || code_cli="$(command -v code 2>/dev/null || true)"
+if [[ -z "$code_cli" ]]; then
+    log "no VS Code remote-cli available yet, skipping extension install."
     exit 0
 fi
+log "using code CLI: ${code_cli}"
 
 # Return the first *.vsix in a directory, or empty if none.
 first_vsix() {
@@ -62,7 +71,7 @@ first_vsix() {
 install_vsix() {
     local vsix="$1"
     log "installing ${EXTENSION_ID} from ${vsix}"
-    code --install-extension "$vsix" --force
+    "$code_cli" --install-extension "$vsix" --force
     log "✅ installed ${EXTENSION_ID}"
 }
 
@@ -88,7 +97,7 @@ if [[ -n "$local_vsix_dir" ]]; then
 fi
 
 # 2) Download fallback. Skip the clone if the extension is already installed (unless --force).
-if [[ "$FORCE" -ne 1 ]] && code --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
+if [[ "$FORCE" -ne 1 ]] && "$code_cli" --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
     log "${EXTENSION_ID} already installed, skipping download."
     exit 0
 fi
