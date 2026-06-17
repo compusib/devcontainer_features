@@ -95,4 +95,26 @@ done
 
 printf '%s' "$sig" > "$SENTINEL" 2>/dev/null || true
 log "✅ installed: $(installed_plugins | tr '\n' ' ')"
+
+# Editor reload signal. The Claude extension builds its slash-command/skill index
+# at activation — BEFORE this wrapper runs — so freshly installed plugins aren't
+# registered until the extension host restarts. We can't restart it from bash, so
+# we write the LOGICAL plugin-config hash (id/version/scope/enabled — stable across
+# idempotent reinstalls) to a file settings-bridge watches, and ONLY when it
+# changed. That fires the restart exactly once per real change and never loops on a
+# no-op reinstall. We are authoritative here: we hold the matching claude binary and
+# just finished installing. Best-effort; jq is already required by the seed step.
+if command -v jq >/dev/null 2>&1; then
+    hash_file="${HOME}/.claude/.plugin-config-hash"
+    plugins_json="$("$CLAUDE_BIN" plugin list --json 2>/dev/null || true)"
+    if [[ -n "$plugins_json" ]]; then
+        new_hash="$(printf '%s' "$plugins_json" \
+            | jq -cS 'sort_by(.id) | map({id, version, scope, enabled})' 2>/dev/null \
+            | sha256sum | cut -d' ' -f1)"
+        if [[ -n "$new_hash" && "$new_hash" != "$(cat "$hash_file" 2>/dev/null || true)" ]]; then
+            printf '%s\n' "$new_hash" >"$hash_file" 2>/dev/null \
+                && log "plugin-config changed -> ${hash_file} (settings-bridge reloads the extension host)"
+        fi
+    fi
+fi
 exit 0
