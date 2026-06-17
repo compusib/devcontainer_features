@@ -28,6 +28,12 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | pluginMarketplaceLocalOverride | Directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source. | string | /workspace/compusib/ai |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
 
+## Customizations
+
+### VS Code Extensions
+
+- `/home/node/.cache/claude-feature/settings-bridge/compusib.settings-bridge.vsix`
+
 ## What it does
 
 The feature sets `claudeCode.claudeProcessWrapper` (via
