@@ -43,11 +43,10 @@ if [[ "$INSTALL_SETTINGS_BRIDGE" != "true" ]]; then
     exit 0
 fi
 
-# Resolve the VS Code CLI. Prefer the Remote server's remote-cli (under
-# ~/.vscode-server): it manages the attached server's extensions and `--install-extension`
-# works offline (no $VSCODE_IPC_HOOK_CLI). A standalone `code` on PATH (e.g.
-# /usr/local/bin/code) can't, so only fall back to it. Glob newest-by-mtime so it
-# survives VS Code commit-hash bumps.
+# Resolve the VS Code Remote server's remote-cli (under ~/.vscode-server). A
+# standalone `code` on PATH (e.g. /usr/local/bin/code) can't manage the server's
+# extensions, so prefer the remote-cli and only fall back to PATH. Glob
+# newest-by-mtime so it survives VS Code commit-hash bumps.
 code_cli="$(ls -t "$HOME"/.vscode-server/bin/*/bin/remote-cli/code 2>/dev/null | head -1 || true)"
 [[ -n "$code_cli" ]] || code_cli="$(command -v code 2>/dev/null || true)"
 if [[ -z "$code_cli" ]]; then
@@ -55,6 +54,23 @@ if [[ -z "$code_cli" ]]; then
     exit 0
 fi
 log "using code CLI: ${code_cli}"
+
+# The remote-cli talks to the attached window over $VSCODE_IPC_HOOK_CLI and refuses
+# to run without it ("only available inside a VS Code terminal"). The postAttach
+# lifecycle shell doesn't inherit that var, but the socket exists (a window is
+# attached) — recover the live value from a vscode-server process's environment,
+# falling back to the newest CLI socket on disk.
+if [[ -z "${VSCODE_IPC_HOOK_CLI:-}" ]]; then
+    for _p in $(pgrep -f 'vscode-server' 2>/dev/null || true); do
+        _v="$(tr '\0' '\n' < "/proc/${_p}/environ" 2>/dev/null | sed -n 's/^VSCODE_IPC_HOOK_CLI=//p' | head -1 || true)"
+        [[ -n "$_v" ]] && { export VSCODE_IPC_HOOK_CLI="$_v"; break; }
+    done
+    if [[ -z "${VSCODE_IPC_HOOK_CLI:-}" ]]; then
+        _sock="$(ls -t /tmp/vscode-ipc-*.sock "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/vscode-ipc-*.sock 2>/dev/null | head -1 || true)"
+        [[ -n "$_sock" ]] && export VSCODE_IPC_HOOK_CLI="$_sock"
+    fi
+    [[ -n "${VSCODE_IPC_HOOK_CLI:-}" ]] && log "recovered VSCODE_IPC_HOOK_CLI=${VSCODE_IPC_HOOK_CLI}"
+fi
 
 # Return the first *.vsix in a directory, or empty if none.
 first_vsix() {
@@ -71,8 +87,14 @@ first_vsix() {
 install_vsix() {
     local vsix="$1"
     log "installing ${EXTENSION_ID} from ${vsix}"
-    "$code_cli" --install-extension "$vsix" --force
-    log "✅ installed ${EXTENSION_ID}"
+    # The remote-cli can print an IPC error yet still exit 0, so don't trust the
+    # exit code — verify the extension actually registered via --list-extensions.
+    "$code_cli" --install-extension "$vsix" --force || true
+    if "$code_cli" --list-extensions 2>/dev/null | grep -qix "$EXTENSION_ID"; then
+        log "✅ installed ${EXTENSION_ID}"
+    else
+        log "⚠️  ${EXTENSION_ID} did not register — no reachable VS Code window (IPC)?"
+    fi
 }
 
 # 1) Prefer a local working tree of the repo if one is already on disk (development workflow).
