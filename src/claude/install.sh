@@ -52,10 +52,18 @@ install_runtime_scripts "${FEATURE_DIR}/scripts"
 # so the runtime helpers can source them.
 install_runtime_libs "${FEATURE_DIR}/scripts" "${FEATURE_LIB_TARGET_DIR}"
 
+# 2d. Create the staging dir for the settings-bridge vsix. VS Code installs the
+# extension declaratively from a fixed path declared in
+# customizations.vscode.extensions; the onCreate hook (running as the remote user)
+# stages the built/cloned vsix there, so the dir must be writable by that user.
+mkdir -p /opt/compusib
+chmod 0777 /opt/compusib
+
 # 3. Persist the resolved options so the runtime helpers can read them.
 write_feature_config "${CONFIG_FILE}"
 
 echo "✅ claude feature installed successfully!"
 echo "   'claude-process-wrapper' is set as claudeCode.claudeProcessWrapper — it runs"
 echo "   'ensure-marketplace-recursively-installed' at each session launch;"
-echo "   'install-settings-bridge' and 'bootstrap-claude-sync' run on postAttach."
+echo "   'install-settings-bridge' stages the extension vsix on onCreate (VS Code then"
+echo "   installs it via customizations.vscode.extensions); 'bootstrap-claude-sync' on postAttach."
