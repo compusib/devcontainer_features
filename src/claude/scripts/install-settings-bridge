@@ -1,24 +1,22 @@
 #!/bin/bash
 #
-# Stage the compusib.settings-bridge *.vsix at a fixed path so VS Code installs it
-# itself, declaratively, via customizations.vscode.extensions (the feature
-# contributes that entry). This is the documented way to ship a local/private
-# extension into a dev container — no `code` CLI, no remote-cli, no
-# $VSCODE_IPC_HOOK_CLI (which hardened containers strip): VS Code's own installer
-# writes to the server extensions dir at connect.
+# Ensure the compusib.settings-bridge *.vsix is present at the canonical path the
+# feature's customizations.vscode.extensions points at, so VS Code installs the
+# extension ITSELF, declaratively, at connect — no `code` CLI, no remote-cli, no
+# $VSCODE_IPC_HOOK_CLI (which hardened containers strip).
 #
-# Two sources, one fixed path ($STAGE — must match customizations.vscode.extensions).
-# We COPY a real file (not a symlink): VS Code's extension installer validates the
-# real path and won't follow a symlink, so a linked vsix stages but never installs
-# (microsoft/vscode-remote-release#8827 — a filepath entry installs, with only a
-# cosmetic validation warning).
-#   1. Local working tree on disk (e.g. bind-mounted /workspace/compusib/ai): copy
-#      the built vsix to $STAGE (re-staged on each onCreate, so rebuilds propagate).
-#   2. Otherwise: shallow + sparse clone of the prebuilt vsix from git (container's
-#      own git auth) and copy it to $STAGE.
+# The extension is installed IN PLACE from wherever the vsix already lives — it is
+# never copied or symlinked into a staging dir:
+#   1. Local working tree (e.g. bind-mounted /workspace/compusib/ai): used as-is.
+#   2. Otherwise: a shallow + sparse CHECKOUT of compusib/ai into that SAME canonical
+#      path, materializing only the vsix dir. Never clones over an existing repo.
 #
-# Designed to run from onCreateCommand: the workspace is mounted and it is BEFORE
-# extensions are configured (the vsix must exist by then). Never fails startup.
+# customizations.vscode.extensions names a fixed, version-less path
+# (.../dist/compusib.settings-bridge.vsix — the extension build emits that stable
+# name), so this script only has to guarantee the checkout exists there.
+#
+# Runs from onCreateCommand: the workspace is set up and it is BEFORE extensions are
+# configured (the vsix must exist by attach). Never fails startup.
 
 set -euo pipefail
 
@@ -30,15 +28,9 @@ SETTINGS_BRIDGE_REPO_PATH="/workspace/compusib/ai"
 SETTINGS_BRIDGE_REPO="git@github.com:compusib/ai.git"
 SETTINGS_BRIDGE_REF="main"
 SETTINGS_BRIDGE_VSIX_DIR="vscode/settings-bridge/dist"
-EXTENSION_ID="compusib.settings-bridge"
+VSIX_NAME="compusib.settings-bridge.vsix"
 # shellcheck source=/dev/null
 [[ -f "$CONFIG_FILE" ]] && . "$CONFIG_FILE"
-
-# Fixed path VS Code installs from. MUST match the feature's
-# customizations.vscode.extensions entry (which can't expand $HOME, so the literal
-# there is /home/node/... — the compusib containers' remote user).
-STAGE_DIR="$HOME/.cache/claude-feature/settings-bridge"
-STAGE="$STAGE_DIR/compusib.settings-bridge.vsix"
 
 log() { echo "🔧 [settings-bridge] $*"; }
 
@@ -47,53 +39,40 @@ if [[ "$INSTALL_SETTINGS_BRIDGE" != "true" ]]; then
     exit 0
 fi
 
-# Return the first *.vsix in a directory, or empty if none.
-first_vsix() {
-    local dir="$1"
-    [[ -d "$dir" ]] || return 0
-    local f
-    for f in "$dir"/*.vsix; do
-        [[ -e "$f" ]] || continue
-        printf '%s\n' "$f"
-        return 0
-    done
-}
+repo="${SETTINGS_BRIDGE_REPO_PATH%/}"
+vsix="${repo}/${SETTINGS_BRIDGE_VSIX_DIR##/}/${VSIX_NAME}"
 
-mkdir -p "$STAGE_DIR" 2>/dev/null || true
-
-# 1) Local working tree -> copy a real file to $STAGE.
-if [[ -n "$SETTINGS_BRIDGE_REPO_PATH" ]]; then
-    local_vsix="$(first_vsix "${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
-    if [[ -n "$local_vsix" ]]; then
-        rm -f "$STAGE"
-        cp -f "$local_vsix" "$STAGE"
-        log "✅ staged ${EXTENSION_ID} -> ${STAGE} (copied from ${local_vsix}; VS Code installs it via customizations.vscode.extensions)"
-        exit 0
-    fi
-    log "no *.vsix under ${SETTINGS_BRIDGE_REPO_PATH%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}, falling back to clone."
-fi
-
-# 2) Git clone -> download + copy to $STAGE (replacing any stale symlink/file).
-tmp=""
-cleanup() { [[ -n "$tmp" && -d "$tmp" ]] && rm -rf "$tmp"; }
-trap cleanup EXIT
-
-log "fetching ${EXTENSION_ID} from ${SETTINGS_BRIDGE_REPO} (${SETTINGS_BRIDGE_REF})"
-tmp="$(mktemp -d)"
-# Shallow + sparse clone of just the vsix dir, using the container's git auth.
-# accept-new auto-trusts github on first contact (a fresh container has no
-# known_hosts entry); auth still relies on the forwarded SSH agent / helper.
-GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new}" \
-git clone --depth 1 --branch "$SETTINGS_BRIDGE_REF" --filter=blob:none --sparse \
-    "$SETTINGS_BRIDGE_REPO" "$tmp"
-git -C "$tmp" sparse-checkout set "$SETTINGS_BRIDGE_VSIX_DIR"
-
-downloaded_vsix="$(first_vsix "${tmp%/}/${SETTINGS_BRIDGE_VSIX_DIR##/}")"
-if [[ -z "$downloaded_vsix" ]]; then
-    log "no *.vsix found under ${SETTINGS_BRIDGE_VSIX_DIR} in the repo, nothing to stage."
+# 1) Already present (mounted working tree, or a checkout from a prior run) -> use in
+#    place. No copy, no symlink — customizations.vscode.extensions points right here.
+if [[ -f "$vsix" ]]; then
+    log "✅ ${VSIX_NAME} present at ${vsix} (VS Code installs it via customizations.vscode.extensions)"
     exit 0
 fi
 
-rm -f "$STAGE"
-cp -f "$downloaded_vsix" "$STAGE"
-log "✅ downloaded ${EXTENSION_ID} -> ${STAGE} (VS Code installs it via customizations.vscode.extensions)"
+# 2) The repo dir exists but holds no vsix -> never clone over it. A dev working tree
+#    just needs to be built; the declarative install no-ops until then.
+if [[ -d "$repo" ]]; then
+    log "⚠️  ${repo} exists but ${SETTINGS_BRIDGE_VSIX_DIR##/}/${VSIX_NAME} is missing — not cloning over an existing repo. Build it with vscode/settings-bridge/build.sh."
+    exit 0
+fi
+
+# 3) No working tree -> sparse + shallow CHECKOUT into the canonical path, so the vsix
+#    lands exactly where customizations.vscode.extensions expects it. accept-new
+#    auto-trusts github on first contact; auth uses the forwarded SSH agent / helper.
+log "checking out ${SETTINGS_BRIDGE_REPO} (${SETTINGS_BRIDGE_REF}) -> ${repo} (sparse: ${SETTINGS_BRIDGE_VSIX_DIR##/})"
+mkdir -p "$(dirname "$repo")"
+if ! GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new}" \
+        git clone --depth 1 --branch "$SETTINGS_BRIDGE_REF" --filter=blob:none --sparse \
+            "$SETTINGS_BRIDGE_REPO" "$repo"; then
+    log "⚠️  checkout failed; removing partial ${repo}."
+    rm -rf "$repo"
+    exit 0
+fi
+git -C "$repo" sparse-checkout set "$SETTINGS_BRIDGE_VSIX_DIR" || true
+
+if [[ -f "$vsix" ]]; then
+    log "✅ checked out ${VSIX_NAME} -> ${vsix} (VS Code installs it via customizations.vscode.extensions)"
+else
+    log "⚠️  checkout completed but ${vsix} not found — nothing to install."
+fi
+exit 0

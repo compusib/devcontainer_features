@@ -1,8 +1,8 @@
 {
     "id": "claude",
-    "version": "0.9.1",
+    "version": "0.10.0",
     "name": "Claude",
-    "description": "Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
+    "description": "Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
     "options": {
         "installSettingsBridge": {
@@ -18,27 +18,22 @@
         "settingsBridgeRepoPath": {
             "type": "string",
             "default": "/workspace/compusib/ai",
-            "description": "Local working tree of settingsBridgeRepo, if it is already checked out into the container (e.g. bind-mounted for extension development). When it contains a *.vsix at settingsBridgeVsixDir it is used as the source, preferred over cloning. Set to empty to always download."
+            "description": "Canonical path of the compusib/ai working tree, which is also exactly the path customizations.vscode.extensions points into. If it already holds the built vsix (bind-mounted working tree, or a prior checkout) the extension installs from it in place. If the path does not exist, the feature sparse-checks-out settingsBridgeRepo here. An existing repo without the vsix is left untouched (never cloned over)."
         },
         "settingsBridgeRepo": {
             "type": "string",
             "default": "git@github.com:compusib/ai.git",
-            "description": "Git URL of the repo to clone the settings-bridge .vsix from when no local working tree (settingsBridgeRepoPath) is present. SSH form by default (relies on SSH-agent forwarding); use the https URL if your container has an HTTPS credential helper instead."
+            "description": "Git URL sparse-checked-out into settingsBridgeRepoPath when that path does not yet exist. SSH form by default (relies on the forwarded SSH agent, which is present at onCreate)."
         },
         "settingsBridgeRef": {
             "type": "string",
             "default": "main",
-            "description": "Git ref (branch/tag) to fetch when downloading the .vsix."
+            "description": "Git ref (branch/tag) to check out when fetching the vsix."
         },
         "settingsBridgeVsixDir": {
             "type": "string",
             "default": "vscode/settings-bridge/dist",
-            "description": "Directory holding the built *.vsix, relative to the repo root. Applies identically to settingsBridgeRepoPath and to a fresh clone of settingsBridgeRepo."
-        },
-        "extensionId": {
-            "type": "string",
-            "default": "compusib.settings-bridge",
-            "description": "Extension id (publisher.name) used for the already-installed idempotency guard."
+            "description": "Directory holding the built compusib.settings-bridge.vsix, relative to settingsBridgeRepoPath. The customizations.vscode.extensions entry is <settingsBridgeRepoPath>/<settingsBridgeVsixDir>/compusib.settings-bridge.vsix (a stable, version-less filename)."
         },
         "claudePlugins": {
             "type": "string",
@@ -72,7 +67,7 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "/home/node/.cache/claude-feature/settings-bridge/compusib.settings-bridge.vsix"
+                "/workspace/compusib/ai/vscode/settings-bridge/dist/compusib.settings-bridge.vsix"
             ],
             "settings": {
                 "claudeCode.claudeProcessWrapper": "/usr/local/bin/claude-process-wrapper"
