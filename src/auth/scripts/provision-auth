@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# provision-auth — install the m2m-certs toolchain via mise.
+#
+# Installs `jinja-template` (the compy wheel) into the mise-managed Python and
+# builds `ssh-jwt` (go.ptx.dk/ssh-jwt) via mise's Go backend, so the shared bash
+# gen-jwt / gen-cert / trust scripts (on PATH via the bashrc feature) can mint
+# m2m JWT credentials.
+#
+# Runs at onCreateCommand as the remote user — /workspace and the user-level mise
+# are available by then. Idempotent and re-runnable. mise is a PREREQUISITE; this
+# script does not install it (a mise-installer feature is planned). It never hard-
+# fails attach: every problem is a warning and a non-zero internal step, but the
+# script exits 0.
+set -uo pipefail
+
+log()  { printf 'auth: %s\n' "$*"; }
+warn() { printf 'auth: WARNING: %s\n' "$*" >&2; }
+
+CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/auth/config.env"
+# shellcheck disable=SC1090
+[ -r "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+
+COMPY_REPO_PATH="${COMPY_REPO_PATH:-/workspace/compusib/compy}"
+SSH_JWT_VERSION="${SSH_JWT_VERSION:-v0.1.0}"
+PYTHON_VERSION="${PYTHON_VERSION:-}"
+KEEP_GO_TOOLCHAIN="${KEEP_GO_TOOLCHAIN:-true}"
+
+SSH_JWT_TOOL="go:go.ptx.dk/ssh-jwt/cmd/ssh-jwt"
+JINJA_PKG="${COMPY_REPO_PATH}/apps/jinja-template"
+
+# 1. mise is required (the installer feature is future/OOS).
+if ! command -v mise >/dev/null 2>&1; then
+  warn "mise not found on PATH — cannot provision the auth toolchain."
+  warn "This feature requires a preinstalled mise (a mise-installer feature is planned)."
+  exit 0
+fi
+
+# 2. Python — declare one only if none is active (respect an existing global pin).
+have_python=false
+if mise which python >/dev/null 2>&1; then
+  log "python already provided by mise ($(mise which python)) — keeping the existing pin."
+  have_python=true
+elif [ -n "$PYTHON_VERSION" ]; then
+  log "no mise python active; pinning python@${PYTHON_VERSION}"
+  if mise use -g "python@${PYTHON_VERSION}"; then
+    have_python=true
+  else
+    warn "failed to install python@${PYTHON_VERSION}"
+  fi
+else
+  warn "no mise python active and the 'pythonVersion' option is unset; jinja-template needs Python."
+  warn "set 'pythonVersion' (e.g. 3.13) or pin a python via mise, then re-run: provision-auth"
+fi
+
+# 3. jinja-template — install the compy package into the mise Python, then reshim
+#    so the console script is on PATH. pip path-install (no uv needed downstream).
+if [ "$have_python" = true ]; then
+  if [ -d "$JINJA_PKG" ]; then
+    log "installing jinja-template from ${JINJA_PKG}"
+    if mise exec -- python -m pip install --upgrade "$JINJA_PKG"; then
+      mise reshim
+    else
+      warn "pip install of jinja-template failed."
+    fi
+  else
+    warn "jinja-template package not found at ${JINJA_PKG} (is compy checked out under /workspace?)."
+  fi
+fi
+
+# 4. ssh-jwt — build via mise's Go backend (needs Go; respect an existing go pin).
+if mise which go >/dev/null 2>&1; then
+  log "go already provided by mise ($(mise which go))."
+else
+  log "installing the Go toolchain (mise) to build ssh-jwt"
+  mise use -g go@latest || warn "failed to install Go via mise"
+fi
+
+log "installing ${SSH_JWT_TOOL}@${SSH_JWT_VERSION}"
+if mise use -g "${SSH_JWT_TOOL}@${SSH_JWT_VERSION}"; then
+  mise reshim
+else
+  warn "failed to build ssh-jwt (${SSH_JWT_TOOL}@${SSH_JWT_VERSION})."
+fi
+
+# 5. Optionally drop Go now that ssh-jwt is a standalone binary.
+if [ "$KEEP_GO_TOOLCHAIN" != "true" ]; then
+  log "keepGoToolchain=false; uninstalling the Go mise tool (ssh-jwt keeps working)."
+  mise uninstall go 2>/dev/null || warn "could not uninstall Go (may not be a mise-managed tool)."
+fi
+
+# 6. Smoke check (warn-only — never blocks attach).
+hash -r 2>/dev/null || true
+for cmd in jinja-template ssh-jwt; do
+  if command -v "$cmd" >/dev/null 2>&1; then
+    log "ok: ${cmd} -> $(command -v "$cmd")"
+  else
+    warn "not on PATH after provisioning: ${cmd}"
+  fi
+done
+
+log "provisioning complete."

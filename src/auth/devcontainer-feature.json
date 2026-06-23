@@ -1,0 +1,33 @@
+{
+    "id": "auth",
+    "version": "0.1.0",
+    "name": "auth",
+    "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/auth/README.md",
+    "description": "compusib auth toolchain for devcontainers. Implemented slice — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.",
+    "options": {
+        "compyRepoPath": {
+            "type": "string",
+            "default": "/workspace/compusib/compy",
+            "description": "Path to the compusib/compy checkout. The jinja-template package is installed from <path>/apps/jinja-template into the mise-managed Python."
+        },
+        "sshJwtVersion": {
+            "type": "string",
+            "default": "v0.1.0",
+            "description": "Version of go.ptx.dk/ssh-jwt to build via mise's Go backend (go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>)."
+        },
+        "pythonVersion": {
+            "type": "string",
+            "default": "",
+            "description": "Fallback Python to declare via mise (e.g. '3.13') ONLY if no mise Python is already active. Empty (default) never overrides an existing pin."
+        },
+        "keepGoToolchain": {
+            "type": "boolean",
+            "default": true,
+            "description": "Keep the Go mise tool after building ssh-jwt. Set false to run 'mise uninstall go' afterward (ssh-jwt keeps working; rebuilding it later needs Go again)."
+        }
+    },
+    "dependsOn": {
+        "ghcr.io/compusib/devcontainer_features/bashrc:0": {}
+    },
+    "onCreateCommand": "provision-auth || true"
+}
