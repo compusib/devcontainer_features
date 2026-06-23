@@ -1,0 +1,12 @@
+{
+    "custom_options": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "auth": {
+                "sshJwtVersion": "latest",
+                "keepGoToolchain": false,
+                "pythonVersion": "3.13"
+            }
+        }
+    }
+}
