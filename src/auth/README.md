@@ -1,3 +1,4 @@
+
 # auth (auth)
 
 compusib auth toolchain for devcontainers. Implemented slice — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.
@@ -14,13 +15,10 @@ compusib auth toolchain for devcontainers. Implemented slice — m2m-certs: prov
 
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
-| compyRepoPath | Path to the compusib/compy checkout. The jinja-template package is installed from `<path>/apps/jinja-template` into the mise-managed Python. | string | /workspace/compusib/compy |
-| sshJwtVersion | Version of `go.ptx.dk/ssh-jwt` to build via mise's Go backend (`go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>`). | string | v0.1.0 |
-| pythonVersion | Fallback Python to declare via mise (e.g. `3.13`) ONLY if no mise Python is already active. Empty (default) never overrides an existing pin. | string | "" |
-| keepGoToolchain | Keep the Go mise tool after building ssh-jwt. Set `false` to run `mise uninstall go` afterward (ssh-jwt keeps working; rebuilding it later needs Go again). | boolean | true |
-
-<!-- The content below is appended from NOTES.md and is the source of truth for
-     the prose; the header + options table above are regenerated on release. -->
+| compyRepoPath | Path to the compusib/compy checkout. The jinja-template package is installed from <path>/apps/jinja-template into the mise-managed Python. | string | /workspace/compusib/compy |
+| sshJwtVersion | Version of go.ptx.dk/ssh-jwt to build via mise's Go backend (go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>). | string | v0.1.0 |
+| pythonVersion | Fallback Python to declare via mise (e.g. '3.13') ONLY if no mise Python is already active. Empty (default) never overrides an existing pin. | string | - |
+| keepGoToolchain | Keep the Go mise tool after building ssh-jwt. Set false to run 'mise uninstall go' afterward (ssh-jwt keeps working; rebuilding it later needs Go again). | boolean | true |
 
 ## Scope
 
@@ -82,3 +80,8 @@ ssh-jwt --help             # the signer
 ```bash
 provision-auth
 ```
+
+
+---
+
+_Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/compusib/devcontainer_features/blob/main/src/auth/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
