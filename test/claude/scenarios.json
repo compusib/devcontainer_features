@@ -25,6 +25,16 @@
             }
         }
     },
+    "marketplace_multi": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "installSettingsBridge": false,
+                "claudePlugins": "base-stack@compusib widget@partner",
+                "pluginMarketplaces": "compusib|git@github.com:compusib/ai.git|/tmp/compusib-multi partner|git@github.com:partner/plugins.git"
+            }
+        }
+    },
     "settings_bridge_local": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
