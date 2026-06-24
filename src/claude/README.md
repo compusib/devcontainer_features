@@ -1,7 +1,7 @@
 
 # Claude (claude)
 
-Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
+Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
 
 ## Example Usage
 
@@ -23,8 +23,14 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | settingsBridgeVsixDir | Directory holding the built compusib.settings-bridge.vsix, relative to settingsBridgeRepoPath. The customizations.vscode.extensions entry is <settingsBridgeRepoPath>/<settingsBridgeVsixDir>/compusib.settings-bridge.vsix (a stable, version-less filename). | string | vscode/settings-bridge/dist |
 | claudePlugins | Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed. Each plugin is installed from the marketplace named by its @<marketplace> suffix (which must be registered via pluginMarketplaces). Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline plus the agent-skills plugin from the addy-agent-skills marketplace; override per devcontainer, or set to empty to install none. | string | base-stack@compusib agent-skills@addy-agent-skills |
 | defaultPluginConfigs | Before installing each plugin, seed its userConfig defaults (declared in the plugin manifest) into ~/.claude/settings.json, using the bash repo's 'manifest-to-default-user-config' (resolved via BASH_REPO_ROOT). Best-effort and idempotent: fill-only (never overwrites a value you have already set), skips plugins that declare no defaults, and silently no-ops when the helper or a manifest is unavailable. Set false to skip default seeding. | boolean | true |
-| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name\|source[\|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (the online source is the fallback when it is absent; re-evaluated every container start). Omit the third field for a marketplace that has no local override. The default registers two marketplaces: 'compusib' (git@github.com:compusib/ai.git, local override /workspace/compusib/ai) and 'addy-agent-skills' (git@github.com:paulbalomiri/agent-skills.git, local override /workspace/paulbalomiri/agent-skills). SSH form by default (relies on SSH-agent forwarding). Set to empty to register no marketplaces. | string | compusib\|git@github.com:compusib/ai.git\|/workspace/compusib/ai addy-agent-skills\|git@github.com:paulbalomiri/agent-skills.git\|/workspace/paulbalomiri/agent-skills |
+| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name|source[|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (the online source is the fallback when it is absent; re-evaluated every container start). Omit the third field for a marketplace that has no local override. The default registers two marketplaces: 'compusib' (git@github.com:compusib/ai.git, local override /workspace/compusib/ai) and 'addy-agent-skills' (git@github.com:paulbalomiri/agent-skills.git, local override /workspace/paulbalomiri/agent-skills). SSH form by default (relies on SSH-agent forwarding). Set to empty to register no marketplaces. | string | compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
+
+## Customizations
+
+### VS Code Extensions
+
+- `/workspace/compusib/ai/vscode/settings-bridge/dist/compusib.settings-bridge.vsix`
 
 ## What it does
 
