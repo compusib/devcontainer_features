@@ -16,8 +16,8 @@ check "provision-auth is installed and executable" test -x /usr/local/bin/provis
 check "config.env persists the default compy repo path" \
     bash -c 'grep -Fq "COMPY_REPO_PATH=\"/workspace/compusib/compy\"" /usr/local/lib/features/auth/config.env'
 
-check "config.env pins ssh-jwt v0.1.0 by default" \
-    bash -c 'grep -Fq "SSH_JWT_VERSION=\"v0.1.0\"" /usr/local/lib/features/auth/config.env'
+check "config.env defaults ssh-jwt to latest" \
+    bash -c 'grep -Fq "SSH_JWT_VERSION=\"latest\"" /usr/local/lib/features/auth/config.env'
 
 check "config.env keeps the Go toolchain by default" \
     bash -c 'grep -Fq "KEEP_GO_TOOLCHAIN=\"true\"" /usr/local/lib/features/auth/config.env'
