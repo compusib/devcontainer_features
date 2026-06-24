@@ -15,7 +15,7 @@ compusib auth toolchain for devcontainers. Implemented slice — m2m-certs: prov
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
 | compyRepoPath | Path to the compusib/compy checkout. The jinja-template package is installed from `<path>/apps/jinja-template` into the mise-managed Python. | string | /workspace/compusib/compy |
-| sshJwtVersion | Version of `go.ptx.dk/ssh-jwt` to build via mise's Go backend (`go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>`). | string | v0.1.0 |
+| sshJwtVersion | Version of `go.ptx.dk/ssh-jwt` to build via mise's Go backend (`go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>`). Accepts a tag (e.g. `v0.0.6`) or `latest` (resolves to the newest published tag). | string | latest |
 | pythonVersion | Fallback Python to declare via mise (e.g. `3.13`) ONLY if no mise Python is already active. Empty (default) never overrides an existing pin. | string | "" |
 | keepGoToolchain | Keep the Go mise tool after building ssh-jwt. Set `false` to run `mise uninstall go` afterward (ssh-jwt keeps working; rebuilding it later needs Go again). | boolean | true |
 

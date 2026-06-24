@@ -16,7 +16,7 @@ CONFIG_FILE="${FEATURE_LIB_TARGET_DIR}/config.env"
 
 # Feature options (uppercased env vars from the devcontainer CLI).
 COMPY_REPO_PATH="${COMPYREPOPATH:-/workspace/compusib/compy}"
-SSH_JWT_VERSION="${SSHJWTVERSION:-v0.1.0}"
+SSH_JWT_VERSION="${SSHJWTVERSION:-latest}"
 PYTHON_VERSION="${PYTHONVERSION:-}"
 KEEP_GO_TOOLCHAIN="${KEEPGOTOOLCHAIN:-true}"
 
