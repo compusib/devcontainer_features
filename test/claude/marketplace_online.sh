@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Scenario: pluginMarketplaceLocalOverride names a directory that does not exist
-# -> the feature falls back to the ONLINE (git) marketplace source.
+# Scenario: a pluginMarketplaces entry whose local override names a directory that does
+# not exist -> the feature falls back to the ONLINE (git) marketplace source.
 #
 # Builds a real container with the option set, proving install.sh threads
-# pluginMarketplaceLocalOverride into the on-disk config.env that
+# pluginMarketplaces into the on-disk config.env that
 # ensure-marketplace-recursively-installed reads. `claude` is stubbed (the native CLI installs
 # at postCreate, which the features test harness does not run), so we assert the marketplace
 # command the script is driven with rather than a real plugin install.
@@ -16,8 +16,8 @@ source dev-container-features-test-lib
 OVERRIDE="/tmp/compusib-no-marketplace"
 rm -rf "$OVERRIDE" # guarantee the override dir is absent -> the online branch is taken
 
-check "config.env records the (absent) local-override path" \
-    grep -q "PLUGIN_MARKETPLACE_LOCAL_OVERRIDE=\"$OVERRIDE\"" /usr/local/lib/features/claude/config.env
+check "config.env records the marketplace entry with the (absent) local-override path" \
+    grep -q "PLUGIN_MARKETPLACES=\"compusib|git@github.com:compusib/ai.git|$OVERRIDE\"" /usr/local/lib/features/claude/config.env
 
 # No mounted checkout at the override path -> the online git source is registered.
 check "registers the online git marketplace source" bash -c '

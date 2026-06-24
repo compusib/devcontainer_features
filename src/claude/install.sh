@@ -17,9 +17,7 @@ SETTINGS_BRIDGE_REF="${SETTINGSBRIDGEREF:-main}"
 SETTINGS_BRIDGE_VSIX_DIR="${SETTINGSBRIDGEVSIXDIR:-vscode/settings-bridge/dist}"
 CLAUDE_PLUGINS="${CLAUDEPLUGINS:-base-stack@compusib}"
 DEFAULT_PLUGIN_CONFIGS="${DEFAULTPLUGINCONFIGS:-true}"
-PLUGIN_MARKETPLACES="${PLUGINMARKETPLACES:-}"
-PLUGIN_MARKETPLACE="${PLUGINMARKETPLACE:-git@github.com:compusib/ai.git}"
-PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="${PLUGINMARKETPLACELOCALOVERRIDE:-/workspace/compusib/ai}"
+PLUGIN_MARKETPLACES="${PLUGINMARKETPLACES:-compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills}"
 BOOTSTRAP_CLAUDE_SYNC="${BOOTSTRAPCLAUDESYNC:-true}"
 
 # Implementation lives in lib/, split by concern; this script just orchestrates.

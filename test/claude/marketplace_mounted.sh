@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Scenario: pluginMarketplaceLocalOverride names a mounted checkout (a directory holding
-# .claude-plugin/marketplace.json) -> the feature registers a local `directory` source.
+# Scenario: a pluginMarketplaces entry whose local override names a mounted checkout (a
+# directory holding .claude-plugin/marketplace.json) -> the feature registers a local
+# `directory` source.
 #
 # Like marketplace_online.sh, this proves install.sh threads the option into the real on-disk
 # config.env; here it drives the mounted branch against that config with `claude` stubbed.
@@ -12,8 +13,8 @@ source dev-container-features-test-lib
 
 OVERRIDE="/tmp/compusib-marketplace"
 
-check "config.env records the mounted local-override path" \
-    grep -q "PLUGIN_MARKETPLACE_LOCAL_OVERRIDE=\"$OVERRIDE\"" /usr/local/lib/features/claude/config.env
+check "config.env records the marketplace entry with the mounted local-override path" \
+    grep -q "PLUGIN_MARKETPLACES=\"compusib|git@github.com:compusib/ai.git|$OVERRIDE\"" /usr/local/lib/features/claude/config.env
 
 # Materialise a checkout at the override path -> a local directory source is registered.
 check "registers a local directory marketplace source when mounted" bash -c '

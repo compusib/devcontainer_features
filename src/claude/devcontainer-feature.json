@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.11.0",
+    "version": "0.12.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -47,18 +47,8 @@
         },
         "pluginMarketplaces": {
             "type": "string",
-            "default": "",
-            "description": "Space-separated list of Claude Code plugin marketplaces to register, each entry 'name|source[|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (re-evaluated every container start). Omit the third field for a marketplace that has no local override. Example: 'compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai partner|git@github.com:partner/plugins.git'. When empty (the default), a single marketplace is synthesized from pluginMarketplace + pluginMarketplaceLocalOverride, named after the first claudePlugins entry's @<marketplace> suffix (backward-compatible single-marketplace mode)."
-        },
-        "pluginMarketplace": {
-            "type": "string",
-            "default": "git@github.com:compusib/ai.git",
-            "description": "Single-marketplace shorthand: online (git) source for the compusib Claude Code plugin marketplace, used only when pluginMarketplaces is empty. Registered at session launch by claude-process-wrapper via 'claude plugin marketplace add'; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding). For more than one marketplace, use pluginMarketplaces instead."
-        },
-        "pluginMarketplaceLocalOverride": {
-            "type": "string",
-            "default": "/workspace/compusib/ai",
-            "description": "Single-marketplace shorthand (used only when pluginMarketplaces is empty): directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source."
+            "default": "compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills",
+            "description": "Space-separated list of Claude Code plugin marketplaces to register, each entry 'name|source[|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (the online source is the fallback when it is absent; re-evaluated every container start). Omit the third field for a marketplace that has no local override. The default registers two marketplaces: 'compusib' (git@github.com:compusib/ai.git, local override /workspace/compusib/ai) and 'addy-agent-skills' (git@github.com:paulbalomiri/agent-skills.git, local override /workspace/paulbalomiri/agent-skills). SSH form by default (relies on SSH-agent forwarding). Set to empty to register no marketplaces."
         },
         "bootstrapClaudeSync": {
             "type": "boolean",

@@ -13,9 +13,14 @@ point before plugin hooks load that has `claude` in hand. The wrapper:
 3. `exec`s the session.
 
 Install finishes before `exec`, so hooks load in that session. A sentinel
-(`~/.claude/.plugins-ensured`, keyed on plugins+source+version) skips the work on
-later launches. Source: `pluginMarketplaceLocalOverride` (a mounted checkout
-holding `.claude-plugin/marketplace.json`) → `directory`, else `pluginMarketplace` git.
+(`~/.claude/.plugins-ensured`, keyed on plugins + every resolved source + version)
+skips the work on later launches. Marketplaces come from `pluginMarketplaces`
+(`name|source[|localOverride]` entries); each plugin in `claudePlugins` is installed
+against the marketplace named by its own `@<suffix>`. Per marketplace, a
+`localOverride` checkout holding `.claude-plugin/marketplace.json` is registered as a
+`directory` source, else the git `source` (the fallback). The default registers two
+marketplaces — `compusib` and `addy-agent-skills` — each preferring its local
+`/workspace/...` checkout and falling back to its GitHub source.
 
 > `claude plugin install` resolves a plugin's direct deps, but a dep it
 > *auto-installs* gets only its **first** dep resolved (2.1.143–2.1.177,
@@ -52,10 +57,11 @@ On attach (`postAttachCommand`), `bootstrap-claude-sync` establishes the
 
 ## Recommendations
 
-- **For marketplace/plugin development**, mount your `compusib/ai` checkout at
-  `/workspace/compusib/ai` (the `pluginMarketplaceLocalOverride` default): the
-  feature points Claude at your working tree instead of the published git
-  marketplace, so edits show up on the next start with no push/pull.
+- **For marketplace/plugin development**, mount the checkout at the local-override
+  path baked into the matching `pluginMarketplaces` entry (e.g. `/workspace/compusib/ai`
+  for `compusib`, `/workspace/paulbalomiri/agent-skills` for `addy-agent-skills`): the
+  feature points Claude at your working tree instead of the published git marketplace,
+  so edits show up on the next start with no push/pull.
 
 - **Bake the system packages into your image** so they aren't reinstalled on
   every rebuild, then set `skipInstallSystemPackages: true`. `rclone` must be

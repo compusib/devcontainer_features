@@ -21,8 +21,7 @@ mk_lib() {
     mkdir -p "$lib/claude"
     cat > "$lib/claude/config.env" <<EOF
 CLAUDE_PLUGINS="base-stack@compusib"
-PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
-PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="$override"
+PLUGIN_MARKETPLACES="compusib|git@github.com:compusib/ai.git|$override"
 EOF
     printf '%s' "$lib"
 }
@@ -53,7 +52,7 @@ check "ensure-marketplace-recursively-installed on PATH" bash -c "command -v ens
 check "no jq transform left behind" bash -c "! test -f /usr/local/lib/features/claude/ensure-marketplace-recursively-installed.jq"
 check "config.env written" test -f /usr/local/lib/features/claude/config.env
 check "config.env records claudePlugins default" bash -c "grep -q 'CLAUDE_PLUGINS=\"base-stack@compusib\"' /usr/local/lib/features/claude/config.env"
-check "config.env records pluginMarketplaceLocalOverride default" bash -c "grep -q 'PLUGIN_MARKETPLACE_LOCAL_OVERRIDE=\"/workspace/compusib/ai\"' /usr/local/lib/features/claude/config.env"
+check "config.env records pluginMarketplaces default (compusib + addy-agent-skills)" bash -c "grep -q 'compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai' /usr/local/lib/features/claude/config.env && grep -q 'addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills' /usr/local/lib/features/claude/config.env"
 
 # With no `code` CLI present, the extension installer must exit 0 (never fail the attach).
 check "install-settings-bridge no-ops without code CLI" bash -c "command -v code >/dev/null 2>&1 || install-settings-bridge"
