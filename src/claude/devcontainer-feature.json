@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.12.0",
+    "version": "0.13.0",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
@@ -37,8 +37,8 @@
         },
         "claudePlugins": {
             "type": "string",
-            "default": "base-stack@compusib",
-            "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none."
+            "default": "base-stack@compusib agent-skills@addy-agent-skills",
+            "description": "Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed. Each plugin is installed from the marketplace named by its @<marketplace> suffix (which must be registered via pluginMarketplaces). Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline plus the agent-skills plugin from the addy-agent-skills marketplace; override per devcontainer, or set to empty to install none."
         },
         "defaultPluginConfigs": {
             "type": "boolean",
