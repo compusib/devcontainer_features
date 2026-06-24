@@ -21,7 +21,7 @@ CONFIG_FILE="${FEATURE_LIB_DIR:-/usr/local/lib/features}/auth/config.env"
 [ -r "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
 COMPY_REPO_PATH="${COMPY_REPO_PATH:-/workspace/compusib/compy}"
-SSH_JWT_VERSION="${SSH_JWT_VERSION:-v0.1.0}"
+SSH_JWT_VERSION="${SSH_JWT_VERSION:-latest}"
 PYTHON_VERSION="${PYTHON_VERSION:-}"
 KEEP_GO_TOOLCHAIN="${KEEP_GO_TOOLCHAIN:-true}"
 
