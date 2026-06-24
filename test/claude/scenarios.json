@@ -25,6 +25,15 @@
             }
         }
     },
+    "marketplace_override_no_manifest": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "claude": {
+                "installSettingsBridge": false,
+                "pluginMarketplaces": "compusib|git@github.com:compusib/ai.git|/tmp/compusib-override-no-manifest"
+            }
+        }
+    },
     "marketplace_multi": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
