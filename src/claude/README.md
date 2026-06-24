@@ -1,7 +1,7 @@
 
 # Claude (claude)
 
-Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
+Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
 
 ## Example Usage
 
@@ -23,10 +23,16 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | settingsBridgeVsixDir | Directory holding the built compusib.settings-bridge.vsix, relative to settingsBridgeRepoPath. The customizations.vscode.extensions entry is <settingsBridgeRepoPath>/<settingsBridgeVsixDir>/compusib.settings-bridge.vsix (a stable, version-less filename). | string | vscode/settings-bridge/dist |
 | claudePlugins | Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed from pluginMarketplace. Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline; override per devcontainer, or set to empty to install none. | string | base-stack@compusib |
 | defaultPluginConfigs | Before installing each plugin, seed its userConfig defaults (declared in the plugin manifest) into ~/.claude/settings.json, using the bash repo's 'manifest-to-default-user-config' (resolved via BASH_REPO_ROOT). Best-effort and idempotent: fill-only (never overwrites a value you have already set), skips plugins that declare no defaults, and silently no-ops when the helper or a manifest is unavailable. Set false to skip default seeding. | boolean | true |
-| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name\|source[\|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (re-evaluated every container start). Omit the third field for a marketplace that has no local override. Example: 'compusib\|git@github.com:compusib/ai.git\|/workspace/compusib/ai partner\|git@github.com:partner/plugins.git'. When empty (the default), a single marketplace is synthesized from pluginMarketplace + pluginMarketplaceLocalOverride, named after the first claudePlugins entry's @<marketplace> suffix (backward-compatible single-marketplace mode). | string | "" |
+| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name|source[|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (re-evaluated every container start). Omit the third field for a marketplace that has no local override. Example: 'compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai partner|git@github.com:partner/plugins.git'. When empty (the default), a single marketplace is synthesized from pluginMarketplace + pluginMarketplaceLocalOverride, named after the first claudePlugins entry's @<marketplace> suffix (backward-compatible single-marketplace mode). | string | - |
 | pluginMarketplace | Single-marketplace shorthand: online (git) source for the compusib Claude Code plugin marketplace, used only when pluginMarketplaces is empty. Registered at session launch by claude-process-wrapper via 'claude plugin marketplace add'; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding). For more than one marketplace, use pluginMarketplaces instead. | string | git@github.com:compusib/ai.git |
 | pluginMarketplaceLocalOverride | Single-marketplace shorthand (used only when pluginMarketplaces is empty): directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source. | string | /workspace/compusib/ai |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
+
+## Customizations
+
+### VS Code Extensions
+
+- `/workspace/compusib/ai/vscode/settings-bridge/dist/compusib.settings-bridge.vsix`
 
 ## What it does
 
@@ -43,15 +49,9 @@ point before plugin hooks load that has `claude` in hand. The wrapper:
 3. `exec`s the session.
 
 Install finishes before `exec`, so hooks load in that session. A sentinel
-(`~/.claude/.plugins-ensured`, keyed on plugins + every resolved source + version)
-skips the work on later launches. Marketplaces come from `pluginMarketplaces`
-(`name|source[|localOverride]` entries); each plugin in `claudePlugins` is installed
-against the marketplace named by its own `@<suffix>`. Per marketplace, a
-`localOverride` checkout holding `.claude-plugin/marketplace.json` is registered as a
-`directory` source, else the git `source`. When `pluginMarketplaces` is empty, a
-single marketplace is synthesized from `pluginMarketplace` + `pluginMarketplaceLocalOverride`
-(named after the first `claudePlugins` entry's `@<suffix>`) — the backward-compatible
-single-marketplace mode.
+(`~/.claude/.plugins-ensured`, keyed on plugins+source+version) skips the work on
+later launches. Source: `pluginMarketplaceLocalOverride` (a mounted checkout
+holding `.claude-plugin/marketplace.json`) → `directory`, else `pluginMarketplace` git.
 
 > `claude plugin install` resolves a plugin's direct deps, but a dep it
 > *auto-installs* gets only its **first** dep resolved (2.1.143–2.1.177,
