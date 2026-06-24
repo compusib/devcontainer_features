@@ -1,7 +1,7 @@
 
 # Claude (claude)
 
-Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
+Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
 
 ## Example Usage
 
@@ -26,6 +26,12 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | pluginMarketplace | Online (git) source for the compusib Claude Code plugin marketplace. Registered at session launch by claude-process-wrapper via 'claude plugin marketplace add'; used unless pluginMarketplaceLocalOverride names a mounted local checkout. SSH form by default (relies on SSH-agent forwarding). | string | git@github.com:compusib/ai.git |
 | pluginMarketplaceLocalOverride | Directory that, when present and containing .claude-plugin/marketplace.json, makes the feature register the compusib marketplace as a local 'directory' source pointing at it (instead of the online pluginMarketplace git source). Re-evaluated on every container start; set to empty to always use the online source. | string | /workspace/compusib/ai |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
+
+## Customizations
+
+### VS Code Extensions
+
+- `/workspace/compusib/ai/vscode/settings-bridge/dist/compusib.settings-bridge.vsix`
 
 ## What it does
 
