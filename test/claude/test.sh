@@ -51,7 +51,7 @@ check "bootstrap-claude-sync on PATH" bash -c "command -v bootstrap-claude-sync"
 check "ensure-marketplace-recursively-installed on PATH" bash -c "command -v ensure-marketplace-recursively-installed"
 check "no jq transform left behind" bash -c "! test -f /usr/local/lib/features/claude/ensure-marketplace-recursively-installed.jq"
 check "config.env written" test -f /usr/local/lib/features/claude/config.env
-check "config.env records claudePlugins default" bash -c "grep -q 'CLAUDE_PLUGINS=\"base-stack@compusib\"' /usr/local/lib/features/claude/config.env"
+check "config.env records claudePlugins default" bash -c "grep -q 'CLAUDE_PLUGINS=\"base-stack@compusib agent-skills@addy-agent-skills\"' /usr/local/lib/features/claude/config.env"
 check "config.env records pluginMarketplaces default (compusib + addy-agent-skills)" bash -c "grep -q 'compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai' /usr/local/lib/features/claude/config.env && grep -q 'addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills' /usr/local/lib/features/claude/config.env"
 
 # With no `code` CLI present, the extension installer must exit 0 (never fail the attach).
