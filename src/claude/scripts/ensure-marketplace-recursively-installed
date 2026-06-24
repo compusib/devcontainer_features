@@ -1,18 +1,25 @@
 #!/bin/bash
-# Install CLAUDE_PLUGINS (+ their full dependency closure) via the claude CLI.
-# Invoked by claude-process-wrapper with the session's binary in CLAUDE_BIN (else
-# resolves one). No jq: the CLI owns marketplace/plugin state. Never fails caller.
+# Install CLAUDE_PLUGINS (+ their full dependency closure) via the claude CLI,
+# from one or more marketplaces. Invoked by claude-process-wrapper with the
+# session's binary in CLAUDE_BIN (else resolves one). No jq for marketplace/plugin
+# state: the CLI owns it. Never fails caller.
+#
+# Marketplaces come from PLUGIN_MARKETPLACES — space-separated 'name|source[|override]'
+# entries (name = the @<marketplace> suffix plugins reference). When empty, a single
+# entry is synthesized from the legacy PLUGIN_MARKETPLACE / PLUGIN_MARKETPLACE_LOCAL_OVERRIDE
+# scalars, named after the first plugin's @<marketplace> suffix.
 #
 # `claude plugin install X` resolves X's direct deps, but a dep it auto-installs
 # gets only its FIRST dep (2.1.143–2.1.177; docs claim transitive — see
 # anthropics/claude-code#68449). So install the roots, then re-install each
-# installed plugin explicitly, looping until none are new (base-stack -> base ->
-# rclone, ...).
+# installed plugin explicitly (with its own @<marketplace> as the source), looping
+# until none are new (base-stack -> base -> rclone, ...).
 
 set -uo pipefail
 
 RUNTIME_LIB_DIR="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude"
 CONFIG_FILE="${RUNTIME_LIB_DIR}/config.env"
+PLUGIN_MARKETPLACES=""
 PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
 PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="/workspace/compusib/ai"
 CLAUDE_PLUGINS=""
@@ -32,11 +39,28 @@ declare -F install_plugin >/dev/null 2>&1 \
 
 [[ -z "$CLAUDE_PLUGINS" ]] && exit 0
 
-# Marketplace name = the @<marketplace> suffix of the first plugin (not hardcoded).
-first_plugin="${CLAUDE_PLUGINS%% *}"
-MARKETPLACE="${first_plugin##*@}"
-[[ -n "$MARKETPLACE" && "$MARKETPLACE" != "$first_plugin" ]] || {
-    log "⚠️  '${first_plugin}' has no @<marketplace> suffix; skipping."; exit 0; }
+# Backward compat: with no PLUGIN_MARKETPLACES list, synthesize a single entry from
+# the legacy scalars, named after the first plugin's @<marketplace> suffix (the old
+# behavior: that suffix was the one marketplace this script ever registered).
+if [[ -z "${PLUGIN_MARKETPLACES// }" ]]; then
+    first_plugin="${CLAUDE_PLUGINS%% *}"
+    legacy_name="${first_plugin##*@}"
+    [[ -n "$legacy_name" && "$legacy_name" != "$first_plugin" ]] || {
+        log "⚠️  '${first_plugin}' has no @<marketplace> suffix; skipping."; exit 0; }
+    PLUGIN_MARKETPLACES="${legacy_name}|${PLUGIN_MARKETPLACE}|${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE}"
+fi
+
+# Parse PLUGIN_MARKETPLACES into name -> source / override maps. Entries are
+# space-separated 'name|source[|override]'; git URLs and paths hold no spaces, so a
+# plain word-split is safe. Bad entries (missing name or source) are skipped.
+declare -A MP_SOURCE MP_OVERRIDE
+for entry in $PLUGIN_MARKETPLACES; do
+    IFS='|' read -r mp_name mp_src mp_ovr <<< "$entry"
+    [[ -n "$mp_name" && -n "$mp_src" ]] || { log "⚠️  bad marketplace entry '${entry}'; skipping."; continue; }
+    MP_SOURCE["$mp_name"]="$mp_src"
+    MP_OVERRIDE["$mp_name"]="${mp_ovr:-}"
+done
+[[ "${#MP_SOURCE[@]}" -gt 0 ]] || { log "⚠️  no usable marketplaces; skipping."; exit 0; }
 
 # Resolve claude: prefer CLAUDE_BIN (wrapper), else PATH / ~/.local/bin / a
 # ~/.bashrc.d sweep (lifecycle hooks run via /bin/sh -c, no ~/.bashrc).
@@ -52,30 +76,46 @@ if [[ -n "${CLAUDE_BIN:-}" && -x "${CLAUDE_BIN}" ]]; then :; else
     CLAUDE_BIN="$(resolve_claude)" || { log "⚠️  claude not found; skipping."; exit 0; }
 fi
 
-# Source: local checkout wins only if it holds a manifest. `marketplace add` is
-# idempotent and re-clones on a flip, so no cache pruning needed.
-if [[ -n "$PLUGIN_MARKETPLACE_LOCAL_OVERRIDE" \
-      && -f "${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}/.claude-plugin/marketplace.json" ]]; then
-    SOURCE="${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE%/}"
-else
-    SOURCE="$PLUGIN_MARKETPLACE"
-fi
-log "marketplace source: ${SOURCE}"
+# Resolve each marketplace's effective source: its local override wins only if that
+# directory holds a manifest, else the git source. `marketplace add` is idempotent
+# and re-clones on a flip, so no cache pruning needed.
+declare -A MP_RESOLVED
+for mp_name in "${!MP_SOURCE[@]}"; do
+    ovr="${MP_OVERRIDE[$mp_name]}"
+    if [[ -n "$ovr" && -f "${ovr%/}/.claude-plugin/marketplace.json" ]]; then
+        MP_RESOLVED["$mp_name"]="${ovr%/}"
+    else
+        MP_RESOLVED["$mp_name"]="${MP_SOURCE[$mp_name]}"
+    fi
+done
 
-# Sentinel: runs every launch, but the work is needed once per (plugins,source,
-# version). Skip when unchanged so steady-state launches are instant. Host-local.
+# Sentinel: runs every launch, but the work is needed once per (plugins, every
+# resolved source, version). Skip when unchanged so steady-state launches are
+# instant. Host-local. Sources are name-sorted so the signature is order-stable.
+sources_sig=""
+while IFS= read -r mp_name; do
+    sources_sig="${sources_sig}${mp_name}=${MP_RESOLVED[$mp_name]};"
+done <<< "$(printf '%s\n' "${!MP_RESOLVED[@]}" | sort)"
 SENTINEL="${HOME}/.claude/.plugins-ensured"
-sig="${CLAUDE_PLUGINS}|${SOURCE}|$("$CLAUDE_BIN" --version 2>/dev/null || echo '?')"
+sig="${CLAUDE_PLUGINS}|${sources_sig}|$("$CLAUDE_BIN" --version 2>/dev/null || echo '?')"
 [[ -f "$SENTINEL" && "$(cat "$SENTINEL" 2>/dev/null)" == "$sig" ]] && exit 0
 
-"$CLAUDE_BIN" plugin marketplace add "$SOURCE" 2>&1 | sed 's/^/    /' || true
-"$CLAUDE_BIN" plugin marketplace update "$MARKETPLACE" >/dev/null 2>&1 || true
+# Register every marketplace.
+for mp_name in "${!MP_RESOLVED[@]}"; do
+    log "marketplace ${mp_name} source: ${MP_RESOLVED[$mp_name]}"
+    "$CLAUDE_BIN" plugin marketplace add "${MP_RESOLVED[$mp_name]}" 2>&1 | sed 's/^/    /' || true
+    "$CLAUDE_BIN" plugin marketplace update "$mp_name" >/dev/null 2>&1 || true
+done
 
-installed_plugins() { "$CLAUDE_BIN" plugin list 2>/dev/null | grep -oE "[a-z0-9-]+@${MARKETPLACE}" | sort -u; }
+# Match installed plugins from any of our marketplaces (regex alternation of names).
+mp_alt="$(printf '%s|' "${!MP_RESOLVED[@]}")"; mp_alt="${mp_alt%|}"
+installed_plugins() { "$CLAUDE_BIN" plugin list 2>/dev/null | grep -oE "[a-z0-9-]+@(${mp_alt})" | sort -u; }
 
+# Each plugin carries its own @<marketplace> suffix — install/re-install it against
+# that marketplace (so seeded defaults resolve from the right manifest cache).
 seen=" "
 for plugin in $CLAUDE_PLUGINS; do
-    install_plugin "$CLAUDE_BIN" "$plugin" "$MARKETPLACE" || log "⚠️  install ${plugin} failed."
+    install_plugin "$CLAUDE_BIN" "$plugin" "${plugin##*@}" || log "⚠️  install ${plugin} failed."
     seen="${seen}${plugin} "
 done
 
@@ -86,7 +126,7 @@ while :; do
         [[ -n "$plugin" ]] || continue
         case "$seen" in *" ${plugin} "*) continue ;; esac
         seen="${seen}${plugin} "
-        install_plugin "$CLAUDE_BIN" "$plugin" "$MARKETPLACE" || true
+        install_plugin "$CLAUDE_BIN" "$plugin" "${plugin##*@}" || true
         progressed=1
     done <<< "$(installed_plugins)"
     [[ "$progressed" -eq 0 ]] && break
