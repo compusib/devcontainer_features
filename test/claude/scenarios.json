@@ -12,7 +12,7 @@
         "features": {
             "claude": {
                 "installSettingsBridge": false,
-                "pluginMarketplaceLocalOverride": "/tmp/compusib-no-marketplace"
+                "pluginMarketplaces": "compusib|git@github.com:compusib/ai.git|/tmp/compusib-no-marketplace"
             }
         }
     },
@@ -21,7 +21,7 @@
         "features": {
             "claude": {
                 "installSettingsBridge": false,
-                "pluginMarketplaceLocalOverride": "/tmp/compusib-marketplace"
+                "pluginMarketplaces": "compusib|git@github.com:compusib/ai.git|/tmp/compusib-marketplace"
             }
         }
     },

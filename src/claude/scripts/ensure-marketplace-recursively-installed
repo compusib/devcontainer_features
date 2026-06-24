@@ -5,9 +5,8 @@
 # state: the CLI owns it. Never fails caller.
 #
 # Marketplaces come from PLUGIN_MARKETPLACES — space-separated 'name|source[|override]'
-# entries (name = the @<marketplace> suffix plugins reference). When empty, a single
-# entry is synthesized from the legacy PLUGIN_MARKETPLACE / PLUGIN_MARKETPLACE_LOCAL_OVERRIDE
-# scalars, named after the first plugin's @<marketplace> suffix.
+# entries (name = the @<marketplace> suffix plugins reference). A local override wins
+# only when it holds .claude-plugin/marketplace.json, else the git source is used.
 #
 # `claude plugin install X` resolves X's direct deps, but a dep it auto-installs
 # gets only its FIRST dep (2.1.143–2.1.177; docs claim transitive — see
@@ -19,9 +18,7 @@ set -uo pipefail
 
 RUNTIME_LIB_DIR="${FEATURE_LIB_DIR:-/usr/local/lib/features}/claude"
 CONFIG_FILE="${RUNTIME_LIB_DIR}/config.env"
-PLUGIN_MARKETPLACES=""
-PLUGIN_MARKETPLACE="git@github.com:compusib/ai.git"
-PLUGIN_MARKETPLACE_LOCAL_OVERRIDE="/workspace/compusib/ai"
+PLUGIN_MARKETPLACES="compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills"
 CLAUDE_PLUGINS=""
 DEFAULT_PLUGIN_CONFIGS="true"
 # shellcheck source=/dev/null
@@ -38,17 +35,6 @@ declare -F install_plugin >/dev/null 2>&1 \
     || install_plugin() { "$1" plugin install "$2" >/dev/null 2>&1; }
 
 [[ -z "$CLAUDE_PLUGINS" ]] && exit 0
-
-# Backward compat: with no PLUGIN_MARKETPLACES list, synthesize a single entry from
-# the legacy scalars, named after the first plugin's @<marketplace> suffix (the old
-# behavior: that suffix was the one marketplace this script ever registered).
-if [[ -z "${PLUGIN_MARKETPLACES// }" ]]; then
-    first_plugin="${CLAUDE_PLUGINS%% *}"
-    legacy_name="${first_plugin##*@}"
-    [[ -n "$legacy_name" && "$legacy_name" != "$first_plugin" ]] || {
-        log "⚠️  '${first_plugin}' has no @<marketplace> suffix; skipping."; exit 0; }
-    PLUGIN_MARKETPLACES="${legacy_name}|${PLUGIN_MARKETPLACE}|${PLUGIN_MARKETPLACE_LOCAL_OVERRIDE}"
-fi
 
 # Parse PLUGIN_MARKETPLACES into name -> source / override maps. Entries are
 # space-separated 'name|source[|override]'; git URLs and paths hold no spaces, so a
