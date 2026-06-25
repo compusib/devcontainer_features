@@ -37,10 +37,12 @@ On attach (`postAttachCommand`), `bootstrap-claude-sync` establishes the
 
 The feature installs `claude-notify-emit` on `PATH`. The `notify` plugin (pulled in
 via `base → notify`, like the rclone hooks) registers Claude hooks that call it when
-the AI is **waiting on you** — `AskUserQuestion`, `ExitPlanMode`, a `Notification`
-(permission prompt / 60s idle) — or **finishes** a turn (`Stop`). `claude-notify-emit`
-appends one JSON line to `~/.claude/notify-queue.jsonl` (it writes nothing to stdout,
-so it can't perturb a `PreToolUse` hook).
+the AI is **waiting on you** — a tool-permission prompt (`PermissionRequest`),
+`AskUserQuestion`, `ExitPlanMode`, 60s idle (`Notification` matcher `idle_prompt`) — or
+**finishes** a turn (`Stop`). `PermissionRequest` is used for permission prompts because
+the `Notification` hook doesn't fire in the VS Code extension (anthropics/claude-code
+#11156). `claude-notify-emit` appends one JSON line to `~/.claude/notify-queue.jsonl`
+(it writes nothing to stdout, so it can't perturb a hook's decision).
 
 That queue is drained by the **settings-bridge** `notify-relay` (workspace extension,
 in the container), which forwards each event over VS Code's extension-host command
