@@ -40,12 +40,14 @@ except Exception:
 cwd="$(json_get cwd)"; [ -n "$cwd" ] || cwd="$PWD"
 where="$(basename "$cwd" 2>/dev/null || printf '%s' '')"
 hookmsg="$(json_get message)"
+toolname="$(json_get tool_name)"
 
 case "$event" in
     question)   msg="Claude has a question" ;;
     plan)       msg="Plan ready for review" ;;
     done)       msg="Task complete" ;;
-    permission) msg="${hookmsg:-Permission required}" ;;
+    # PermissionRequest payload carries tool_name (no .message); name the tool.
+    permission) msg="${hookmsg:-Permission needed${toolname:+ for $toolname}}" ;;
     idle)       msg="${hookmsg:-Waiting for your input}" ;;
     *)          msg="${hookmsg:-Claude needs your attention}" ;;
 esac
