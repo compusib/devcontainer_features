@@ -14,6 +14,7 @@ install_runtime_scripts() {
         "install-settings-bridge"
         "bootstrap-claude-sync"
         "ensure-marketplace-recursively-installed"
+        "claude-notify-emit"
     )
     local script
     for script in "${scripts_to_install[@]}"; do
