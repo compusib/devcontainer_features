@@ -13,11 +13,15 @@
 # The hook's JSON payload arrives on stdin; we read it best-effort for a richer
 # message (.message) and the project dir (.cwd). This script writes NOTHING to
 # stdout — a PreToolUse hook's stdout can steer the tool call, so we must not leak.
+#
+# The queue is PER PROJECT + SCOPE: ~/.claude/notify-queue/<key>-<scope>.jsonl, where
+# <key> is the sanitized project root and <scope> is remote|local. The settings-bridge
+# relay in each window watches only the file for ITS workspace, so a notification fires
+# from the window it belongs to — not whichever window's relay happened to drain a
+# single shared file (which would focus a random/unrelated window).
 set -uo pipefail
 
 event="${1:-notification}"
-queue="${HOME}/.claude/notify-queue.jsonl"
-mkdir -p "$(dirname "$queue")" 2>/dev/null || true
 
 # Capture the hook payload from stdin (hooks always pipe JSON; stdin is not a tty).
 payload=""
@@ -41,6 +45,17 @@ cwd="$(json_get cwd)"; [ -n "$cwd" ] || cwd="$PWD"
 where="$(basename "$cwd" 2>/dev/null || printf '%s' '')"
 hookmsg="$(json_get message)"
 toolname="$(json_get tool_name)"
+
+# Per-project, per-scope queue. The project root is CLAUDE_PROJECT_DIR (the workspace
+# folder Claude was launched in) so the key matches the relay's workspaceFolder; cwd is
+# the fallback. scope=remote inside a container (/.dockerenv), local otherwise — this is
+# what distinguishes the same folder open both locally and in a devcontainer. The
+# sanitize rule MUST match the relay's: replace every non [A-Za-z0-9_-] char with '-'.
+proj="${CLAUDE_PROJECT_DIR:-$cwd}"
+key="$(printf '%s' "$proj" | sed 's#[^A-Za-z0-9_-]#-#g')"
+[ -f /.dockerenv ] && scope="remote" || scope="local"
+queue="${HOME}/.claude/notify-queue/${key}-${scope}.jsonl"
+mkdir -p "$(dirname "$queue")" 2>/dev/null || true
 
 case "$event" in
     question)   msg="Claude has a question" ;;
