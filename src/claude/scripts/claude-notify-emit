@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# Append one Claude "the AI is waiting / done" event to the notify queue that the
+# settings-bridge `notify-relay` drains and forwards (across the devcontainer
+# boundary, over VS Code's extension-host command channel) to the UI-side
+# `notify-host` extension, which shows a native OS notification on the user's
+# machine.
+#
+# Invoked from a Claude Code hook (see the `notify` plugin's hooks.json):
+#     claude-notify-emit <event-label>
+# where <event-label> is one of: question | plan | done | permission | idle | notification
+#
+# The hook's JSON payload arrives on stdin; we read it best-effort for a richer
+# message (.message) and the project dir (.cwd). This script writes NOTHING to
+# stdout — a PreToolUse hook's stdout can steer the tool call, so we must not leak.
+set -uo pipefail
+
+event="${1:-notification}"
+queue="${HOME}/.claude/notify-queue.jsonl"
+mkdir -p "$(dirname "$queue")" 2>/dev/null || true
+
+# Capture the hook payload from stdin (hooks always pipe JSON; stdin is not a tty).
+payload=""
+[ -t 0 ] || payload="$(cat 2>/dev/null)"
+
+# json_get <key> -> value (empty if no parser or key absent). python3 preferred; jq fallback.
+json_get() {
+    local key="$1"
+    if command -v python3 >/dev/null 2>&1; then
+        printf '%s' "$payload" | python3 -c "import sys,json
+try:
+    print(json.load(sys.stdin).get('$key','') or '')
+except Exception:
+    pass" 2>/dev/null
+    elif command -v jq >/dev/null 2>&1; then
+        printf '%s' "$payload" | jq -r --arg k "$key" '.[$k] // empty' 2>/dev/null
+    fi
+}
+
+cwd="$(json_get cwd)"; [ -n "$cwd" ] || cwd="$PWD"
+where="$(basename "$cwd" 2>/dev/null || printf '%s' '')"
+hookmsg="$(json_get message)"
+
+case "$event" in
+    question)   msg="Claude has a question" ;;
+    plan)       msg="Plan ready for review" ;;
+    done)       msg="Task complete" ;;
+    permission) msg="${hookmsg:-Permission required}" ;;
+    idle)       msg="${hookmsg:-Waiting for your input}" ;;
+    *)          msg="${hookmsg:-Claude needs your attention}" ;;
+esac
+
+# Build the JSON object with a real serializer when available (safe escaping);
+# otherwise a minimal hand-escaped fallback. Output goes ONLY to the queue file.
+if command -v python3 >/dev/null 2>&1; then
+    python3 -c "import json,sys
+print(json.dumps({'title':'Claude Code','message':sys.argv[1],'subtitle':sys.argv[2],'event':sys.argv[3]}))" \
+        "$msg" "$where" "$event" >> "$queue" 2>/dev/null || true
+else
+    esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+    printf '{"title":"Claude Code","message":"%s","subtitle":"%s","event":"%s"}\n' \
+        "$(esc "$msg")" "$(esc "$where")" "$event" >> "$queue" 2>/dev/null || true
+fi
+
+exit 0

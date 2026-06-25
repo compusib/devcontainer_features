@@ -33,6 +33,24 @@ On attach (`postAttachCommand`), `bootstrap-claude-sync` establishes the
 `bootstrapClaudeSync: false`). The session-sync hooks themselves ship in the
 `rclone` plugin (a dependency pulled in above), not from this feature.
 
+## Native notifications
+
+The feature installs `claude-notify-emit` on `PATH`. The `notify` plugin (pulled in
+via `base → notify`, like the rclone hooks) registers Claude hooks that call it when
+the AI is **waiting on you** — `AskUserQuestion`, `ExitPlanMode`, a `Notification`
+(permission prompt / 60s idle) — or **finishes** a turn (`Stop`). `claude-notify-emit`
+appends one JSON line to `~/.claude/notify-queue.jsonl` (it writes nothing to stdout,
+so it can't perturb a `PreToolUse` hook).
+
+That queue is drained by the **settings-bridge** `notify-relay` (workspace extension,
+in the container), which forwards each event over VS Code's extension-host command
+channel to the **`notify-host`** UI extension on the user's machine, which shows a
+native OS banner. The command channel is the only transport that works for a **remote**
+devcontainer. `notify-host` is **not** installed by this feature — it must be installed
+host-side once (it is a UI extension; the feature can only provision the container). See
+`compusib/ai/vscode/notify-host/README.md`. Without it, the queue is simply drained and
+discarded — no error.
+
 ## Requirements
 
 - **Mount the compusib bash repo** at `compusibBashRepoRoot` (default
