@@ -41,8 +41,11 @@ the AI is **waiting on you** — a tool-permission prompt (`PermissionRequest`),
 `AskUserQuestion`, `ExitPlanMode`, 60s idle (`Notification` matcher `idle_prompt`) — or
 **finishes** a turn (`Stop`). `PermissionRequest` is used for permission prompts because
 the `Notification` hook doesn't fire in the VS Code extension (anthropics/claude-code
-#11156). `claude-notify-emit` appends one JSON line to `~/.claude/notify-queue.jsonl`
-(it writes nothing to stdout, so it can't perturb a hook's decision).
+#11156). `claude-notify-emit` appends one JSON line to a **per-window** queue
+`~/.claude/notify-queue/<workspace>-<scope>.jsonl` (scope = remote in a container, local
+otherwise), so the settings-bridge relay in each window drains only its own events and
+the banner fires from the window it belongs to — not a random window sharing `~/.claude`.
+It writes nothing to stdout, so it can't perturb a hook's decision.
 
 That queue is drained by the **settings-bridge** `notify-relay` (workspace extension,
 in the container), which forwards each event over VS Code's extension-host command
