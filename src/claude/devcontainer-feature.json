@@ -1,6 +1,6 @@
 {
     "id": "claude",
-    "version": "0.15.0",
+    "version": "0.15.1",
     "name": "Claude",
     "description": "Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied), provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach, and installs claude-notify-emit so the notify plugin's hooks can raise native OS notifications (relayed by settings-bridge to the host-side notify-host extension) when Claude is waiting on you.",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/claude/README.md",
