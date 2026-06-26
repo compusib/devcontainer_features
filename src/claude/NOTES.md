@@ -52,9 +52,14 @@ in the container), which forwards each event over VS Code's extension-host comma
 channel to the **`notify-host`** UI extension on the user's machine, which shows a
 native OS banner. The command channel is the only transport that works for a **remote**
 devcontainer. `notify-host` is **not** installed by this feature — it must be installed
-host-side once (it is a UI extension; the feature can only provision the container). See
-`compusib/ai/vscode/notify-host/README.md`. Without it, the queue is simply drained and
-discarded — no error.
+host-side once (it is a UI extension; the feature can only provision the container).
+Without it the queue is simply drained and discarded (no error), and `settings-bridge`
+shows a one-time, dismissible prompt with the install command.
+
+**Host setup (one-time, per Mac):** install `notify-host`, plus `terminal-notifier` and
+`AltTab` for click-to-focus, and grant the macOS permissions — see the checklist at the
+top of `compusib/ai/vscode/notify-host/README.md`. The extensions nudge you when a piece
+is missing; suppress with `compusib.notify.suppressSetupPrompts`.
 
 ## Requirements
 
