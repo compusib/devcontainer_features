@@ -15,7 +15,7 @@ Installs the argbash utility
 
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
-| version | Select the argbash version. | string | 2.10.0 |
+| version | Select the argbash version. | string | 2.11.0 |
 | installPrefix | Select the installation prefix. | string | /usr/local |
 
 # Argbash feature
