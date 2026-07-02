@@ -1,14 +1,15 @@
 {
     "id": "argbash",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "name": "argbash",
     "documentationURL": "https://github.com/compusib/compujs/src/argbash/README.md",
     "description": "Installs the argbash utility",
     "options": {
         "version": {
-            "default": "2.10.0",
+            "default": "2.11.0",
             "description": "Select the argbash version.",
             "proposals": [
+                "2.11.0",
                 "2.10.0"
             ],
             "type": "string"

@@ -3,7 +3,7 @@ set -e
 
 
 
-ARGBASH_VERSION=${VERSION:-"2.10.0"}
+ARGBASH_VERSION=${VERSION:-"2.11.0"}
 ARGBASH_PREFIX=${INSTALLPREFIX:-/usr/local}
 
 mkdir /tmp/argbash
