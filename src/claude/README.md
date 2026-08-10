@@ -1,7 +1,7 @@
 
 # Claude (claude)
 
-Installs the private compusib.settings-bridge VS Code extension (from a local working tree when available, otherwise cloned from git at runtime) and provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach.
+Installs the private compusib.settings-bridge VS Code extension in place (from a local working tree when available, otherwise a sparse checkout of compusib/ai at the same canonical path — never copied), provisions Claude data sync (~/.claude to Backblaze B2 via rcloneops) on attach, and installs claude-notify-emit so the notify plugin's hooks can raise native OS notifications (relayed by settings-bridge to the host-side notify-host extension) when Claude is waiting on you.
 
 ## Example Usage
 
@@ -23,8 +23,14 @@ Installs the private compusib.settings-bridge VS Code extension (from a local wo
 | settingsBridgeVsixDir | Directory holding the built compusib.settings-bridge.vsix, relative to settingsBridgeRepoPath. The customizations.vscode.extensions entry is <settingsBridgeRepoPath>/<settingsBridgeVsixDir>/compusib.settings-bridge.vsix (a stable, version-less filename). | string | vscode/settings-bridge/dist |
 | claudePlugins | Space-separated Claude Code plugins (each <name>@<marketplace>) every container using this feature should have installed. Each plugin is installed from the marketplace named by its @<marketplace> suffix (which must be registered via pluginMarketplaces). Installed at each Claude session launch by claude-process-wrapper (set as claudeCode.claudeProcessWrapper) via 'claude plugin install', which also pulls each plugin's full dependency closure. Defaults to the compusib baseline plus the agent-skills plugin from the addy-agent-skills marketplace; override per devcontainer, or set to empty to install none. | string | base-stack@compusib agent-skills@addy-agent-skills |
 | defaultPluginConfigs | Before installing each plugin, seed its userConfig defaults (declared in the plugin manifest) into ~/.claude/settings.json, using the bash repo's 'manifest-to-default-user-config' (resolved via BASH_REPO_ROOT). Best-effort and idempotent: fill-only (never overwrites a value you have already set), skips plugins that declare no defaults, and silently no-ops when the helper or a manifest is unavailable. Set false to skip default seeding. | boolean | true |
-| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name\|source[\|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (the online source is the fallback when it is absent; re-evaluated every container start). Omit the third field for a marketplace that has no local override. The default registers two marketplaces: 'compusib' (git@github.com:compusib/ai.git, local override /workspace/compusib/ai) and 'addy-agent-skills' (git@github.com:paulbalomiri/agent-skills.git, local override /workspace/paulbalomiri/agent-skills). SSH form by default (relies on SSH-agent forwarding). Set to empty to register no marketplaces. | string | compusib\|git@github.com:compusib/ai.git\|/workspace/compusib/ai addy-agent-skills\|git@github.com:paulbalomiri/agent-skills.git\|/workspace/paulbalomiri/agent-skills |
+| pluginMarketplaces | Space-separated list of Claude Code plugin marketplaces to register, each entry 'name|source[|localOverride]'. name must match the @<marketplace> suffix used in claudePlugins; source is the online (git) marketplace URL; the optional localOverride is a directory that, when present and containing .claude-plugin/marketplace.json, is registered as a local 'directory' source instead (the online source is the fallback when it is absent; re-evaluated every container start). Omit the third field for a marketplace that has no local override. The default registers two marketplaces: 'compusib' (git@github.com:compusib/ai.git, local override /workspace/compusib/ai) and 'addy-agent-skills' (git@github.com:paulbalomiri/agent-skills.git, local override /workspace/paulbalomiri/agent-skills). SSH form by default (relies on SSH-agent forwarding). Set to empty to register no marketplaces. | string | compusib|git@github.com:compusib/ai.git|/workspace/compusib/ai addy-agent-skills|git@github.com:paulbalomiri/agent-skills.git|/workspace/paulbalomiri/agent-skills |
 | bootstrapClaudeSync | Run 'rcloneops claude-bootstrap' on attach to establish the ~/.claude bisync baseline against Backblaze B2. (The session-sync hooks ship in the rclone Claude Code plugin, enabled declaratively via claudePlugins — not installed here.) Requires rcloneops on PATH (from the bashrc feature) and the DEVCONTAINERS_B2_* credentials in the env; cleanly no-ops otherwise. Set false to disable entirely. | boolean | true |
+
+## Customizations
+
+### VS Code Extensions
+
+- `/workspace/compusib/ai/vscode/settings-bridge/dist/compusib.settings-bridge.vsix`
 
 ## What it does
 
@@ -60,6 +66,29 @@ On attach (`postAttachCommand`), `bootstrap-claude-sync` establishes the
 `~/.claude` ↔ Backblaze B2 bisync baseline via `rcloneops` (disable with
 `bootstrapClaudeSync: false`). The session-sync hooks themselves ship in the
 `rclone` plugin (a dependency pulled in above), not from this feature.
+
+## Native notifications
+
+The feature installs `claude-notify-emit` on `PATH`. The `notify` plugin (pulled in
+via `base → notify`, like the rclone hooks) registers Claude hooks that call it when
+the AI is **waiting on you** — a tool-permission prompt (`PermissionRequest`),
+`AskUserQuestion`, `ExitPlanMode`, 60s idle (`Notification` matcher `idle_prompt`) — or
+**finishes** a turn (`Stop`). `PermissionRequest` is used for permission prompts because
+the `Notification` hook doesn't fire in the VS Code extension (anthropics/claude-code
+#11156). `claude-notify-emit` appends one JSON line to a **per-window** queue
+`~/.claude/notify-queue/<workspace>-<scope>.jsonl` (scope = remote in a container, local
+otherwise), so the settings-bridge relay in each window drains only its own events and
+the banner fires from the window it belongs to — not a random window sharing `~/.claude`.
+It writes nothing to stdout, so it can't perturb a hook's decision.
+
+That queue is drained by the **settings-bridge** `notify-relay` (workspace extension,
+in the container), which forwards each event over VS Code's extension-host command
+channel to the **`notify-host`** UI extension on the user's machine, which shows a
+native OS banner. The command channel is the only transport that works for a **remote**
+devcontainer. `notify-host` is **not** installed by this feature — it must be installed
+host-side once (it is a UI extension; the feature can only provision the container). See
+`compusib/ai/vscode/notify-host/README.md`. Without it, the queue is simply drained and
+discarded — no error.
 
 ## Requirements
 
