@@ -109,7 +109,7 @@ list_hook_types() {
         fi
         
         # Count executable files in the directory
-        executable_hooks=($(find "$hook_dir" -maxdepth 1 -type f -executable 2>/dev/null | sort -V))
+        executable_hooks=($(find "$hook_dir" -maxdepth 1 -type f -perm /111 2>/dev/null | sort -V))
         hook_count=${#executable_hooks[@]}
         
         echo "${tree_prefix}📁 ${hook_type}.d/ ($hook_count executable hook(s))"

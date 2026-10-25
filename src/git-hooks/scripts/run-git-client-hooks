@@ -34,7 +34,7 @@ if [ ! -d "$HOOKS_DIR" ]; then
 fi
 
 # Get all executable files in hooks directory, sorted numerically by filename
-hooks=($(find "$HOOKS_DIR" -type f -executable | sort -V))
+hooks=($(find "$HOOKS_DIR" -type f -perm /111 | sort -V))
 
 if [ ${#hooks[@]} -eq 0 ]; then
     echo "ℹ️  No executable hooks found in ${HOOK_NAME}.d/"
