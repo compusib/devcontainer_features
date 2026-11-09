@@ -108,8 +108,8 @@ list_hook_types() {
             sub_tree_prefix="  │   "
         fi
         
-        # Count executable files in the directory
-        executable_hooks=($(find "$hook_dir" -maxdepth 1 -type f -executable 2>/dev/null | sort -V))
+        # Count executable files in the directory (the same test as run-git-client-hooks)
+        executable_hooks=($(find "$hook_dir" -maxdepth 1 -type f -perm /111 -executable 2>/dev/null | sort -V))
         hook_count=${#executable_hooks[@]}
         
         echo "${tree_prefix}📁 ${hook_type}.d/ ($hook_count executable hook(s))"
