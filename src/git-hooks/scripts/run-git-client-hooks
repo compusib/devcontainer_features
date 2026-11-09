@@ -33,8 +33,10 @@ if [ ! -d "$HOOKS_DIR" ]; then
     exit 0
 fi
 
-# Get all executable files in hooks directory, sorted numerically by filename
-hooks=($(find "$HOOKS_DIR" -type f -executable | sort -V))
+# Get all executable files in hooks directory, sorted numerically by filename.
+# -perm /111 besides -executable: on some mounts (Docker Desktop's virtiofs) access(2) reports every
+# file as executable, so -executable alone also picks up a README and the run fails trying to run it.
+hooks=($(find "$HOOKS_DIR" -type f -perm /111 -executable | sort -V))
 
 if [ ${#hooks[@]} -eq 0 ]; then
     echo "ℹ️  No executable hooks found in ${HOOK_NAME}.d/"
