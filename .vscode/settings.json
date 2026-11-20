@@ -1,5 +1,14 @@
 {
   "github.copilot.chat.commitMessageGeneration.instructions": [
     { "file": ".github/commit-message-guideline.md" }
-  ]
+  ],
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#9c73fd",
+    "titleBar.activeForeground": "#15141a",
+    "titleBar.inactiveBackground": "#9c73fd",
+    "titleBar.inactiveForeground": "#15141acc",
+    "activityBar.background": "#6334b6",
+    "activityBar.foreground": "#ffffff",
+    "activityBar.inactiveForeground": "#ffffff99"
+  }
 }
