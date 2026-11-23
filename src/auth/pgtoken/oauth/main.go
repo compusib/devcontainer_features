@@ -2,13 +2,13 @@
 //
 // pgtoken.so loads it at the moment a server asks for a token, and calls pgtoken_mint. What it does is the JWT
 // profile of OAuth 2.0 (RFC 7523): an assert signed by the ssh agent's key says who logs in, and is exchanged at
-// the token endpoint for an access token. The client that asks is named and has no secret and no key: it decides
-// nothing. Whether a token is given rests on the trust the authorization server holds for the signing key, and on
-// what its token hook writes into the token. Every part is somebody's library:
+// the token endpoint by a client of the authorization server. The client proves itself with its own key, a file
+// (private_key_jwt), or is a public one that has none. Every part is somebody's library:
 //
-//	the signature  go.ptx.dk/ssh-jwt, the package of the ssh-jwt tool: the key stays in the agent
-//	the issuer     github.com/coreos/go-oidc: its discovery document
-//	the exchange   golang.org/x/oauth2: the request to the token endpoint and what it answers
+//	the user's signature  go.ptx.dk/ssh-jwt, the package of the ssh-jwt tool: the key stays in the agent
+//	the client's          github.com/golang-jwt/jwt and github.com/go-jose/go-jose (the key's id)
+//	the issuer            github.com/coreos/go-oidc: its discovery document
+//	the exchange          golang.org/x/oauth2: the request to the token endpoint and what it answers
 //
 //	go build -buildmode=c-shared -trimpath -ldflags='-s -w' -o pgtoken-oauth.so .
 package main
@@ -17,7 +17,7 @@ package main
 #include <stdlib.h>
 
 typedef struct {
-	const char *discovery, *server, *client_id, *scope, *audience, *subject;
+	const char *discovery, *server, *client_id, *client_key_file, *client_key_id, *scope, *audience, *subject;
 	int allow_http;
 } pgtoken_request;
 */
@@ -25,17 +25,22 @@ import "C"
 
 import (
 	"context"
+	"crypto"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/golang-jwt/jwt/v5"
 	sshjwt "go.ptx.dk/ssh-jwt"
 	"golang.org/x/oauth2"
@@ -44,12 +49,13 @@ import (
 
 const (
 	assertGrant = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+	clientProof = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 	discovery   = "/.well-known/openid-configuration"
 )
 
 type request struct {
-	discovery, server, clientID, scope, audience, subject string
-	allowHTTP                                             bool
+	discovery, server, clientID, clientKeyFile, clientKeyID, scope, audience, subject string
+	allowHTTP                                                                         bool
 }
 
 var signer sync.Once
@@ -62,7 +68,7 @@ func secure(address string, allowHTTP bool) error {
 	return fmt.Errorf("not an https address: %s", address)
 }
 
-// statement is what the assert says: who, to that endpoint alone, for two minutes, once.
+// statement is what both signed tokens say: who, to that endpoint alone, for two minutes, once.
 func statement(who, endpoint string) (jwt.MapClaims, error) {
 	id := make([]byte, 16)
 	if _, err := rand.Read(id); err != nil {
@@ -102,6 +108,34 @@ func assert(subject, endpoint string) (string, error) {
 	return signed, nil
 }
 
+// proof is the client's statement (private_key_jwt), signed with the client's own key. The key's id is what the
+// client publishes it under: as the gateway names it, the key file's name, a space, the key's thumbprint.
+func proof(r request, endpoint string) (string, error) {
+	pem, err := os.ReadFile(r.clientKeyFile)
+	if err != nil {
+		return "", fmt.Errorf("the client's key: %w", err)
+	}
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(pem)
+	if err != nil {
+		return "", fmt.Errorf("the client's key %s: %w", r.clientKeyFile, err)
+	}
+	id := r.clientKeyID
+	if id == "" {
+		thumbprint, err := (&jose.JSONWebKey{Key: &key.PublicKey}).Thumbprint(crypto.SHA256)
+		if err != nil {
+			return "", err
+		}
+		id = filepath.Base(r.clientKeyFile) + " " + base64.RawURLEncoding.EncodeToString(thumbprint)
+	}
+	claims, err := statement(r.clientID, endpoint)
+	if err != nil {
+		return "", err
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims) // what every client of the gateway's kind is registered with
+	token.Header["kid"] = id
+	return token.SignedString(key)
+}
+
 // at is an address of the issuer as the server has it: the same path, where the server is reached.
 func at(server, issuer, address string) (string, error) {
 	there, err := url.Parse(address)
@@ -123,7 +157,7 @@ func at(server, issuer, address string) (string, error) {
 
 // mint asks the authorization server for a token of the issuer. The issuer is the one the connection trusts and
 // the PostgreSQL server names; the server is where it is reached, the issuer itself when none is given. Reached
-// elsewhere, it must still say it is that issuer, and the assert is addressed to the issuer's own endpoint.
+// elsewhere, it must still say it is that issuer, and both statements are addressed to the issuer's own endpoint.
 func mint(r request) (string, error) {
 	issuer, ok := strings.CutSuffix(r.discovery, discovery)
 	if !ok {
@@ -181,6 +215,14 @@ func mint(r request) (string, error) {
 	if r.audience != "" {
 		exchange.EndpointParams.Set("audience", r.audience)
 	}
+	if r.clientKeyFile != "" {
+		proved, err := proof(r, official)
+		if err != nil {
+			return "", err
+		}
+		exchange.EndpointParams.Set("client_assertion_type", clientProof)
+		exchange.EndpointParams.Set("client_assertion", proved)
+	}
 	token, err := exchange.Token(ctx)
 	if err != nil {
 		var refused *oauth2.RetrieveError
@@ -204,8 +246,8 @@ func pgtoken_mint(r *C.pgtoken_request, problem **C.char) (token *C.char) {
 	}()
 	minted, err := mint(request{
 		discovery: C.GoString(r.discovery), server: C.GoString(r.server),
-		clientID: C.GoString(r.client_id),
-		scope:    C.GoString(r.scope), audience: C.GoString(r.audience), subject: C.GoString(r.subject),
+		clientID: C.GoString(r.client_id), clientKeyFile: C.GoString(r.client_key_file), clientKeyID: C.GoString(r.client_key_id),
+		scope: C.GoString(r.scope), audience: C.GoString(r.audience), subject: C.GoString(r.subject),
 		allowHTTP: r.allow_http != 0,
 	})
 	if err != nil {

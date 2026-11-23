@@ -14,10 +14,18 @@
  *      PG_OAUTH_TOKEN        the token itself, or
  *      PG_OAUTH_TOKEN_FILE   a file that holds it
  *
- * Without one it is a developer's way in, with the key in the ssh agent. The mint (pgtoken-oauth.so beside this
- * file, or PG_OAUTH_LIBRARY) signs an assert with that key and exchanges it at the token endpoint, for the scope
- * the server requires. The connection's client only names who asks: it has no secret and no key. A token is
- * given on the trust the authorization server holds for the signing key.
+ * Without one it is a developer's way in, and two signatures. The mint (pgtoken-oauth.so beside this file, or
+ * PG_OAUTH_LIBRARY) signs an assert with the key in the ssh agent, which says who logs in. The client that asks
+ * proves itself with a key of its own, a file (private_key_jwt): the host's. It has no secret. The assert is
+ * exchanged at the token endpoint for the scope the server requires, and a token is given on the trust the
+ * authorization server holds for the user's key.
+ *      PG_OAUTH_CLIENT_KEY_FILE  the client's private key, a PEM file; not set: the client proves nothing
+ *      PG_OAUTH_CLIENT_KEY_ID    the id the client publishes that key under; not set: the key file's name, a
+ *                                space, the key's thumbprint
+ *    The client's id is the connection's oauth_client_id. It differs per host, and libpq has no environment
+ *    variable for it: where the connection names the word from_the_environment, it is
+ *      PG_OAUTH_CLIENT_ID        the client's id, or
+ *      PG_OAUTH_CLIENT_ID_FILE   a file whose first line is that id
  *      PG_OAUTH_SERVER    where the authorization server is reached; not set: at the connection's issuer
  *      PG_OAUTH_SUBJECT   who signs: the issuer the agent key's trust is registered under (else GIT_AUTHOR_EMAIL)
  *      PG_OAUTH_AUDIENCE  the audience asked for; not set: none
@@ -43,6 +51,7 @@
 
 #define EXPORT __attribute__((visibility("default")))
 #define MINT_LIBRARY "pgtoken-oauth.so"
+#define CLIENT_FROM_THE_ENVIRONMENT "from_the_environment"
 #define NO_KEY "the ssh agent: "   /* how the mint begins when the agent, or a key in it, is not there */
 
 typedef struct BearerRequest {   /* PGoauthBearerRequest of libpq-fe.h */
@@ -66,7 +75,7 @@ typedef struct {                 /* PQconninfoOption of libpq-fe.h */
 } ConninfoOption;
 
 typedef struct {                 /* pgtoken_request of pgtoken-oauth.so: every text is set, "" for none */
-    const char *discovery, *server, *client_id, *scope, *audience, *subject;
+    const char *discovery, *server, *client_id, *client_key_file, *client_key_id, *scope, *audience, *subject;
     int allow_http;
 } MintRequest;
 typedef char *(*Mint)(const MintRequest *request, char **problem);
@@ -176,6 +185,24 @@ static Mint load_mint(char **error)
     return mint;
 }
 
+/* The client's id where the connection leaves it to the environment: PG_OAUTH_CLIENT_ID, else the first line of
+ * the file PG_OAUTH_CLIENT_ID_FILE names. Empty when neither gives one. */
+static void client_from_the_environment(char *client, size_t size)
+{
+    const char *value = env("PG_OAUTH_CLIENT_ID"), *path;
+    FILE *file;
+
+    client[0] = 0;
+    if (value) {
+        snprintf(client, size, "%s", value);
+    } else if ((path = env("PG_OAUTH_CLIENT_ID_FILE")) && (file = fopen(path, "r"))) {
+        if (!fgets(client, size, file))
+            client[0] = 0;
+        fclose(file);
+        client[strcspn(client, " \t\r\n")] = 0;
+    }
+}
+
 /* A token for the connection's client, minted for the key in the ssh agent. NULL with *error set when none is. */
 static char *minted_token(void *conn, const BearerRequestV2 *request, char **error)
 {
@@ -183,6 +210,7 @@ static char *minted_token(void *conn, const BearerRequestV2 *request, char **err
     void (*release)(ConninfoOption *) = (void (*)(ConninfoOption *)) dlsym(RTLD_DEFAULT, "PQconninfoFree");
     ConninfoOption *options, *o;
     const char *subject, *server = env("PG_OAUTH_SERVER"), *audience = env("PG_OAUTH_AUDIENCE");
+    const char *key_file = env("PG_OAUTH_CLIENT_KEY_FILE"), *key_id = env("PG_OAUTH_CLIENT_KEY_ID");
     char client[256] = "", server_address[1024] = "", *token;
     MintRequest wanted;
     Mint mint;
@@ -192,6 +220,14 @@ static char *minted_token(void *conn, const BearerRequestV2 *request, char **err
             if (!strcmp(o->keyword, "oauth_client_id") && o->val)
                 snprintf(client, sizeof client, "%s", o->val);
         release(options);
+    }
+    if (!strcmp(client, CLIENT_FROM_THE_ENVIRONMENT)) {
+        client_from_the_environment(client, sizeof client);
+        if (!client[0]) {
+            *error = why("the connection leaves the client to the environment, and neither PG_OAUTH_CLIENT_ID nor "
+                         "the file PG_OAUTH_CLIENT_ID_FILE names gives one");
+            return NULL;
+        }
     }
     if (!request->v1.openid_configuration || !client[0]) {
         *error = why("the connection names no issuer or no client id");
@@ -208,6 +244,8 @@ static char *minted_token(void *conn, const BearerRequestV2 *request, char **err
     wanted.discovery = request->v1.openid_configuration;
     wanted.server = server_address;
     wanted.client_id = client;
+    wanted.client_key_file = key_file ? key_file : "";
+    wanted.client_key_id = key_id ? key_id : "";
     wanted.scope = request->v1.scope ? request->v1.scope : "";
     wanted.audience = audience ? audience : "";
     wanted.subject = subject;

@@ -1,6 +1,6 @@
 {
     "id": "auth",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "name": "auth",
     "documentationURL": "https://github.com/compusib/devcontainer_features/blob/main/src/auth/README.md",
     "description": "compusib auth toolchain for devcontainers. Implemented slices — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. pgtoken: a PostgreSQL client on libpq 18 or newer (psql) logs in over OAuth with a JWT that is given or with the ssh agent's key, no password and no browser. It installs a module of PostgreSQL 19's public libpq-oauth ABI, which libpq 19 loads by itself, and a loader that the remote user's ~/.bashrc.d preloads where libpq is 18. The connection's service names the issuer and the client; the feature sets no PG_OAUTH_* variable and installs no PostgreSQL client. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.",
