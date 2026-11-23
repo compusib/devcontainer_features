@@ -1,0 +1,10 @@
+# mise: the tools of this repo that are not the image's. The dev container installs them when it is created
+# (.devcontainer/config/hooks/post-create.sh). The image that builds pgtoken for a release installs the go alone
+# (src/auth/pgtoken/Dockerfile).
+[tools]
+# Builds pgtoken-oauth.so (src/auth/pgtoken). The go compugo pins.
+go = "1.27.4"
+# `ssh-jwt jwk` gives gate M the public half of the agent's key, whose trust it registers at a throwaway Hydra
+# (test/auth/pgtoken/gates.sh). The version is the one pgtoken-oauth.so is built with (its oauth/go.mod). mise
+# builds it with the go above.
+"go:go.ptx.dk/ssh-jwt/cmd/ssh-jwt" = "0.0.6"

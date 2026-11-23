@@ -8,5 +8,17 @@
                 "pythonVersion": "3.13"
             }
         }
+    },
+    "pgtoken_libpq19": {
+        "image": "postgres:18-bookworm",
+        "features": {
+            "auth": {}
+        }
+    },
+    "pgtoken_libpq18": {
+        "image": "postgres:18.0-bookworm",
+        "features": {
+            "auth": {}
+        }
     }
 }

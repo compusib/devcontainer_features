@@ -1,6 +1,6 @@
 # auth (auth)
 
-compusib auth toolchain for devcontainers. Implemented slice — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.
+compusib auth toolchain for devcontainers. Implemented slices — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. pgtoken: a PostgreSQL client on libpq 18 or newer (psql) logs in over OAuth with a JWT that is given or with the ssh agent's key, no password and no browser. It installs a module of PostgreSQL 19's public libpq-oauth ABI, which libpq 19 loads by itself, and a loader that the remote user's ~/.bashrc.d preloads where libpq is 18. The connection's service names the issuer and the client; the feature sets no PG_OAUTH_* variable and installs no PostgreSQL client. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.
 
 ## Example Usage
 
@@ -30,6 +30,7 @@ in slices:
 | Slice | Status | What it provisions |
 |---|---|---|
 | **m2m-certs** | ✅ implemented | `jinja-template` + `ssh-jwt`, so the shared bash `gen-jwt` / `gen-cert` / `trust` mint machine-to-machine JWT credentials |
+| **pgtoken** | ✅ implemented | psql logs in to a PostgreSQL server over OAuth, with a JWT that is given or with the ssh agent's key: no password, no browser. See [pgtoken](#pgtoken-psql-logs-in-over-oauth) |
 | browser auth flows | 🔜 planned | interactive / browser login provisioning (not yet implemented) |
 
 ## How it works (m2m-certs)
@@ -82,3 +83,124 @@ ssh-jwt --help             # the signer
 ```bash
 provision-auth
 ```
+
+## pgtoken: psql logs in over OAuth
+
+A PostgreSQL client (psql, pg_dump, …) logs in to a server that takes OAuth logins. There are two ways in.
+
+| Way in | Who | What happens |
+|---|---|---|
+| A JWT is given | a machine, or a developer who brings one in from outside the container | it is handed on as it is. Nothing is minted |
+| The ssh agent's key | a developer | an assert signed by the key is exchanged at the authorization server (Hydra) for a token. Whether one is given rests on the trust registered there for the key. The client that asks has no secret and no key |
+
+Every other way of logging in (a password, a certificate, …) works as before: pgtoken is asked only when a
+server asks for a bearer token.
+
+### What the feature installs, and how it is turned on
+
+Three files, in `/usr/local/lib/pgtoken`. The feature turns them on by itself: there is no option for it.
+
+| File | Is |
+|---|---|
+| `libpq-oauth.so` | the module, on PostgreSQL 19's public module ABI. It hands a given JWT on, or has one minted |
+| `pgtoken-oauth.so` | the mint: the signature by the agent's key, and the exchange. Loaded when a token has to be minted, and not before |
+| `pgtoken.so` | the loader, for libpq 18 |
+
+| The container's libpq | What happens |
+|---|---|
+| 19 or newer | libpq loads the module itself, by its name: the feature puts the directory first on the linker's path. Nothing is preloaded and no variable is set |
+| 18 | libpq cannot load a module of one's own. `~/.bashrc.d/130_pgtoken.sh` puts the loader into `LD_PRELOAD` in the user's shells, and the loader loads the module the way libpq 19 does |
+| older, or none | nothing: there is no OAuth in that libpq |
+
+The feature installs **no PostgreSQL client**: it comes from elsewhere. A PostgreSQL 18 client installed from
+PGDG runs on libpq 19 today, so the first row is the usual one. When no container has libpq 18 any more, the
+loader and the file in `~/.bashrc.d` can be deleted and the rest stays as it is.
+
+A libpq 18 that is not the system's (`/usr/lib/<triplet>/libpq.so.5`), one that mise built for instance, is not
+recognised. Its user sets `LD_PRELOAD=/usr/local/lib/pgtoken/pgtoken.so`.
+
+### What a connection has to name
+
+libpq wants two settings before it asks anybody for a token, and has no environment variable for either:
+`oauth_issuer` and `oauth_client_id`. A connection names them itself, or a service does:
+
+```ini
+# ~/.pg_service.conf
+[oauth]
+host=<the server>
+dbname=<the database>
+oauth_issuer=https://auth.compusib.ro
+oauth_client_id=psql
+```
+
+```bash
+export PGSERVICE=oauth      # or: psql service=oauth
+psql
+```
+
+What a connection string writes wins over the service, and the service over the `PG*` variables: that is
+libpq's own order, and pgtoken takes the client id of the connection as libpq ends up with it.
+
+With a JWT that is given the client id is not used. libpq still wants one named: any word does, such as
+`oauth_client_id=jwt_instead_of_client_id`.
+
+### The variables
+
+None is set by the feature, and none has an option: a container sets what it needs. What is not set has the
+module's own behaviour.
+
+| Variable | Is | Not set |
+|---|---|---|
+| `PG_OAUTH_TOKEN` | a JWT that is given | the file below |
+| `PG_OAUTH_TOKEN_FILE` | a file that holds it | the developer's way: a token is minted |
+| `PG_OAUTH_SERVER` | where the authorization server is reached | at the connection's `oauth_issuer` |
+| `PG_OAUTH_SUBJECT` | who signs: the issuer the agent key's trust is registered under | `GIT_AUTHOR_EMAIL` |
+| `PG_OAUTH_AUDIENCE` | the audience asked for | none is asked for |
+| `PG_OAUTH_LIBRARY` | the path of the mint, `pgtoken-oauth.so` | beside the module |
+
+A variable that is set and empty counts as not set.
+
+**A JWT from outside the container.** `PG_OAUTH_TOKEN` is looked at wherever the client runs, so a token the
+host has can be brought in through `devcontainer.json`:
+
+```jsonc
+"remoteEnv": { "PG_OAUTH_TOKEN": "${localEnv:PG_OAUTH_TOKEN}" }
+```
+
+`remoteEnv` is read when the editor attaches, so a new token arrives with the next attach. `containerEnv` is
+fixed when the container is created. Where the host has no such variable the value is empty, and a token is
+minted as if it were not set.
+
+**Per directory.** mise sets any of them, and `PGSERVICE` with them, for one repo:
+
+```toml
+# mise.toml
+[env]
+PGSERVICE = "oauth"
+PG_OAUTH_SUBJECT = "dev@compusib.ro"
+```
+
+### When there is nothing to sign with
+
+With no JWT and no key to sign with (no ssh agent, or an empty one) pgtoken hands the login to PostgreSQL's own
+`libpq-oauth`, which sends the user to a browser, and says why in one line. That happens only where that
+package is installed (it is not, by default); elsewhere the login fails with the reason. pgtoken's module is the
+one that is found first in either case. A refusal by the authorization server (no trust for the key, a subject
+it does not know) is never replaced by the browser: psql shows it.
+
+### When a login fails
+
+- psql's message carries the reason on libpq 19 (`user-defined OAuth flow failed: …`). On libpq 18 the loader
+  says it on standard error (`pgtoken: …`).
+- `server requires OAuth authentication, but oauth_issuer and oauth_client_id are not both set`: no service is
+  named, or it lacks one of the two.
+- `no OAuth flows are available`: libpq found no module. On libpq 19, `PGOAUTHDEBUG=plugin-errors` says why.
+  On libpq 18 the loader is not in `LD_PRELOAD`: the shell has not read `~/.bashrc.d`.
+
+### Building it (this repo)
+
+The libraries are not in git. `make -C src/auth/pgtoken dist` builds them for `linux/amd64` and `linux/arm64`
+in an image of Debian 12 (the older libc they have to run on), with the go `mise.toml` pins; CI does that before
+it tests and before it publishes. `make -C src/auth/pgtoken` builds for this machine, and
+`bash test/auth/pgtoken/gates.sh` tries the result: the loader in programs that are no PostgreSQL client (I),
+the mint against a throwaway Hydra (M), and logins on libpq 18 and 19 at a throwaway PostgreSQL server (L).
