@@ -23,11 +23,22 @@ has() { case "$2" in *"$3"*) pass "$1" ;; *) fail "$1" "expected '$3' in '$(cut 
 json() { curl -s -H 'content-type: application/json' "$@"; }
 # A payload segment of a token (base64url) on standard input: its claims, as JSON.
 payload() { tr '_-' '/+' | { read -r p; while [ $(( ${#p} % 4 )) -ne 0 ]; do p="$p="; done; echo "$p"; } | base64 -d 2>/dev/null; }
-# The throwaway Hydra whose admin API is at $1 gets the trust for the agent's key, and the public client psql.
+# The throwaway Hydra whose admin API is at $1 gets the trust for the agent's key, the public client psql, and the
+# client host, which proves itself with a key of its own ($T/host.test), published as the gateway names it: the
+# file's name, a space, the key's thumbprint. $T/stranger is a key nobody published.
 hydra_knows() {
   ssh-jwt jwk | jq '{issuer: "dev@test", allow_any_subject: true, scope: ["pg"], expires_at: "2099-01-01T00:00:00Z", jwk: (if type == "array" then .[0] else . end)}' \
     | json -X POST "$1/admin/trust/grants/jwt-bearer/issuers" -d @- | jq -e .id >/dev/null || fail "the trust for the agent's key" "not registered"
   json -X POST "$1/admin/clients" -d '{"client_id": "psql", "client_name": "psql", "grant_types": ["urn:ietf:params:oauth:grant-type:jwt-bearer"], "token_endpoint_auth_method": "none", "scope": "pg", "audience": ["admin.test"]}' >/dev/null
+  openssl genrsa -out "$T/host.test" 2048 2>/dev/null; openssl genrsa -out "$T/stranger" 2048 2>/dev/null
+  python3 -c 'import base64, hashlib, json, subprocess, sys
+n = bytes.fromhex(subprocess.run(["openssl", "rsa", "-in", sys.argv[1], "-noout", "-modulus"], capture_output=True, text=True).stdout.strip().split("=", 1)[1])
+b = lambda x: base64.urlsafe_b64encode(x).rstrip(b"=").decode()
+thumb = b(hashlib.sha256(json.dumps({"e": "AQAB", "kty": "RSA", "n": b(n)}, separators=(",", ":"), sort_keys=True).encode()).digest())
+print(json.dumps({"kty": "RSA", "alg": "RS512", "use": "sig", "kid": "host.test " + thumb, "n": b(n), "e": "AQAB"}))' "$T/host.test" > "$T/host.jwk"
+  jq -n --slurpfile key "$T/host.jwk" '{client_id: "host", client_name: "host.test_private_key_jwt", grant_types: ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
+      token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "RS512", jwks: {keys: $key}, audience: ["admin.test"]}' \
+    | json -X POST "$1/admin/clients" -d @- | jq -e '.client_id == "host"' >/dev/null || fail "the client with a key" "not registered"
 }
 
 gate_I() {
@@ -76,6 +87,10 @@ gate_M() {
   has "an issuer without TLS, not in a test"        "$(m client_id=psql allow_http=0)"                 "not an https address"
   has "an address that is no discovery one"         "$(m client_id=psql discovery="$H/elsewhere")"     "not an OpenID one"
   has "no ssh agent"                                "$(SSH_AUTH_SOCK=/nonexistent m client_id=psql)"   "the ssh agent"
+  is  "a client that proves itself with its key"    "$(m client_id=host client_key_file="$T/host.test" audience=admin.test | claims)" "iss=$H sub=dev@test scope=pg client=host audience=true"
+  has "that client with another key"                "$(m client_id=host client_key_file="$T/stranger" client_key_id="$(jq -r .kid "$T/host.jwk")")" "invalid_client"
+  has "that client without its key"                 "$(m client_id=host)"                              "invalid_client"
+  has "a key file that is not there"                "$(m client_id=host client_key_file="$T/none")"    "the client's key"
   down
 }
 
@@ -110,9 +125,11 @@ gate_L() {
   # library path. libpq 19 takes an address without TLS on `UNSAFE:http`; libpq 18 knows `UNSAFE` alone.
   printf '[pg]\nhost=%s\ndbname=postgres\nuser=dev\noauth_issuer=%s\noauth_client_id=psql\n[jwt]\nhost=%s\ndbname=postgres\nuser=dev\noauth_issuer=%s\noauth_client_id=jwt_instead_of_client_id\n' \
     "$pg" "$H" "$pg" "$H" > "$T/services"
+  echo host > "$T/client"   # a file that holds the client's id
   client() {   # client <name> <image> <PGOAUTHDEBUG>
     docker run -d ${PGTOKEN_CLIENT_PLATFORM:+--platform "$PGTOKEN_CLIENT_PLATFORM"} --network "$net" --name "$1" -v "$SSH_AUTH_SOCK":/agent -e SSH_AUTH_SOCK=/agent -e PGOAUTHDEBUG="$3" --entrypoint sleep "$2" infinity >/dev/null \
       && docker cp -q "$B" "$1":/built && docker cp -q "$src/install-pgtoken.sh" "$1":/install-pgtoken.sh && docker cp -q "$T/services" "$1":/root/.pg_service.conf \
+      && docker cp -q "$T/host.test" "$1":/host.test && docker cp -q "$T/client" "$1":/client \
       && docker exec "$1" bash /install-pgtoken.sh /built /root
   }
   client "$c19" "${LIBPQ19_IMG:-postgres:18-trixie}" UNSAFE:http || fail "pgtoken in the libpq 19 client" "not installed"
@@ -128,7 +145,7 @@ gate_L() {
   preloaded() { docker exec "$1" bash -c '. ~/.bashrc.d/130_pgtoken.sh; echo "${LD_PRELOAD:-}"' 2>&1; }
   # An OAuth login is shown by the claims of the token the server got (server/validator.c). Anything else: as it is.
   seen() { local out; out=$(cat); case "$out" in oauth:*) payload <<<"${out#oauth:}" | jq -r '"iss=\(.iss) sub=\(.sub) client=\(.client_id)"' ;; *) echo "$out" ;; esac; }
-  local jwt given="iss=null sub=given@test client=null" minted="iss=$H sub=dev@test client=psql"
+  local jwt given="iss=null sub=given@test client=null" minted="iss=$H sub=dev@test client=psql" hosts="iss=$H sub=dev@test client=host"
   jwt="h.$(printf '{"sub":"given@test"}' | base64 | tr '+/' '-_' | tr -d '=').s"
 
   # With no JWT and no ssh agent there is nothing to sign with. PostgreSQL's own module is not installed yet.
@@ -166,6 +183,11 @@ gate_L() {
     is  "L9 $n, PGSERVICE and PGUSER lose to the connection string" "$(q "$c" PGSERVICE=jwt PGUSER=pw -- "service=pg user=dev" | seen)" "$minted"
     is  "L10 $n, PG_OAUTH_SERVER names another address of Hydra" "$(q "$c" PG_OAUTH_SERVER="$inner" -- service=pg | seen)" "$minted"
     has "L10 $n, PG_OAUTH_SERVER names an address nobody is at"  "$(q "$c" PG_OAUTH_SERVER=http://127.0.0.1:9 -- service=pg)" "127.0.0.1:9"
+    is  "L12 $n, the client and its key from the environment"    "$(q "$c" PG_OAUTH_CLIENT_ID=host PG_OAUTH_CLIENT_KEY_FILE=/host.test -- "service=pg oauth_client_id=from_the_environment" | seen)" "$hosts"
+    is  "L12 $n, the client's id from a file"                    "$(q "$c" PG_OAUTH_CLIENT_ID_FILE=/client PG_OAUTH_CLIENT_KEY_FILE=/host.test -- "service=pg oauth_client_id=from_the_environment" | seen)" "$hosts"
+    has "L12 $n, that client without its key: Hydra's refusal"   "$(q "$c" PG_OAUTH_CLIENT_ID=host -- "service=pg oauth_client_id=from_the_environment")" "invalid_client"
+    has "L12 $n, the environment names no client"                "$(q "$c" -- "service=pg oauth_client_id=from_the_environment")" "PG_OAUTH_CLIENT_ID"
+    is  "L12 $n, an id the connection names stands"              "$(q "$c" PG_OAUTH_CLIENT_ID=host -- service=pg | seen)" "$minted"
   done
   has "L7 libpq 18: the loader is the one that says it"          "$(q "$c18" PG_OAUTH_SUBJECT=other@test -- service=pg)" "pgtoken: "
   for c in "$c19" "$c18"; do

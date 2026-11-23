@@ -1,6 +1,6 @@
 /* mint-try: calls pgtoken_mint of a library and prints the token, or the problem on standard error.
  *   mint-try <pgtoken-oauth.so> <name=value>...
- * names: discovery server client_id scope audience subject allow_http
+ * names: discovery server client_id client_key_file client_key_id scope audience subject allow_http
  * A name given twice has its last value.
  */
 #include <dlfcn.h>
@@ -9,16 +9,16 @@
 #include <string.h>
 
 typedef struct {
-    const char *discovery, *server, *client_id, *scope, *audience, *subject;
+    const char *discovery, *server, *client_id, *client_key_file, *client_key_id, *scope, *audience, *subject;
     int allow_http;
 } Request;
 typedef char *(*Mint)(const Request *, char **);
 
 int main(int argc, char **argv)
 {
-    Request r = {"", "", "", "", "", "", 0};
-    const char *names[] = {"discovery", "server", "client_id", "scope", "audience", "subject"};
-    const char **fields[] = {&r.discovery, &r.server, &r.client_id, &r.scope, &r.audience, &r.subject};
+    Request r = {"", "", "", "", "", "", "", "", 0};
+    const char *names[] = {"discovery", "server", "client_id", "client_key_file", "client_key_id", "scope", "audience", "subject"};
+    const char **fields[] = {&r.discovery, &r.server, &r.client_id, &r.client_key_file, &r.client_key_id, &r.scope, &r.audience, &r.subject};
     char *problem = NULL, *token, *equals;
     void *library;
     Mint mint;
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
         *equals = 0;
         if (!strcmp(argv[i], "allow_http"))
             r.allow_http = atoi(equals + 1);
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < 8; j++)
             if (!strcmp(argv[i], names[j]))
                 *fields[j] = equals + 1;
     }
