@@ -1,3 +1,4 @@
+
 # auth (auth)
 
 compusib auth toolchain for devcontainers. Implemented slices — m2m-certs: provisions jinja-template (compy wheel) and ssh-jwt (go.ptx.dk/ssh-jwt) via mise so the shared bash gen-jwt/gen-cert/trust mint machine-to-machine JWT credentials. pgtoken: a PostgreSQL client on libpq 18 or newer (psql) logs in over OAuth with a JWT that is given or with the ssh agent's key, no password and no browser. It installs a module of PostgreSQL 19's public libpq-oauth ABI, which libpq 19 loads by itself, and a loader that the remote user's ~/.bashrc.d preloads where libpq is 18. The connection's service names the issuer and the client; the feature sets no PG_OAUTH_* variable and installs no PostgreSQL client. Browser auth flows are a planned future slice. Requires a preinstalled mise; it does not install mise.
@@ -14,13 +15,10 @@ compusib auth toolchain for devcontainers. Implemented slices — m2m-certs: pro
 
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
-| compyRepoPath | Path to the compusib/compy checkout. The jinja-template package is installed from `<path>/apps/jinja-template` into the mise-managed Python. | string | /workspace/compusib/compy |
-| sshJwtVersion | Version of `go.ptx.dk/ssh-jwt` to build via mise's Go backend (`go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>`). Accepts a tag (e.g. `v0.0.6`) or `latest` (resolves to the newest published tag). | string | latest |
-| pythonVersion | Fallback Python to declare via mise (e.g. `3.13`) ONLY if no mise Python is already active. Empty (default) never overrides an existing pin. | string | "" |
-| keepGoToolchain | Keep the Go mise tool after building ssh-jwt. Set `false` to run `mise uninstall go` afterward (ssh-jwt keeps working; rebuilding it later needs Go again). | boolean | true |
-
-<!-- The content below is appended from NOTES.md and is the source of truth for
-     the prose; the header + options table above are regenerated on release. -->
+| compyRepoPath | Path to the compusib/compy checkout. The jinja-template package is installed from <path>/apps/jinja-template into the mise-managed Python. | string | /workspace/compusib/compy |
+| sshJwtVersion | Version of go.ptx.dk/ssh-jwt to build via mise's Go backend (go install go.ptx.dk/ssh-jwt/cmd/ssh-jwt@<version>). Accepts a tag (e.g. 'v0.0.6') or 'latest' (resolves to the newest published tag). | string | latest |
+| pythonVersion | Fallback Python to declare via mise (e.g. '3.13') ONLY if no mise Python is already active. Empty (default) never overrides an existing pin. | string | - |
+| keepGoToolchain | Keep the Go mise tool after building ssh-jwt. Set false to run 'mise uninstall go' afterward (ssh-jwt keeps working; rebuilding it later needs Go again). | boolean | true |
 
 ## Scope
 
@@ -204,3 +202,8 @@ in an image of Debian 12 (the older libc they have to run on), with the go `mise
 it tests and before it publishes. `make -C src/auth/pgtoken` builds for this machine, and
 `bash test/auth/pgtoken/gates.sh` tries the result: the loader in programs that are no PostgreSQL client (I),
 the mint against a throwaway Hydra (M), and logins on libpq 18 and 19 at a throwaway PostgreSQL server (L).
+
+
+---
+
+_Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/compusib/devcontainer_features/blob/main/src/auth/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
