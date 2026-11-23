@@ -1,6 +1,9 @@
 services:
   devcontainer-features-dev:
-    image: mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm
+    build:
+      # Paths are relative to this fragment's dir (.devcontainer). The image is the javascript-node one, with mise.
+      context: .
+      dockerfile: Dockerfile
     command: sleep infinity
     volumes:
       # relative to this fragment's dir (<project>/.devcontainer); .. is the repo root

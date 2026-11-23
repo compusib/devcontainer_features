@@ -37,7 +37,7 @@
         // Defaults match this environment. Test the source directly from the repo root with:
         //   devcontainer features test -f claude -i mcr.microsoft.com/devcontainers/base:ubuntu .
         "ghcr.io/compusib/devcontainer_features/claude:0": {
-            "claudePlugins": "base-stack@compusib"
+            "claudePlugins": "base-stack@compusib agent-skills@addy-agent-skills"
         }
     },
     "containerEnv": {
@@ -50,8 +50,19 @@
 		"DEVCONTAINERS_B2_KEY": "${localEnv:DEVCONTAINERS_B2_KEY}",
 		"DEVCONTAINERS_B2_BUCKET": "${localEnv:DEVCONTAINERS_B2_BUCKET}",
 		// TEMPORARY: remove once the bashrc feature sets BASH_REPO_ROOT itself
-		"BASH_REPO_ROOT": "/workspace/compusib/bash"
+		"BASH_REPO_ROOT": "/workspace/compusib/bash",
+		// Auto-trust the workspace's mise configs (mise.toml here), for interactive shells, the lifecycle
+		// hooks and mise's shims alike.
+		"MISE_TRUSTED_CONFIG_PATHS": "/workspace"
+    },
+    // mise's shims, for what VS Code starts outside an interactive shell (go, ssh-jwt). Interactive shells get
+    // the tools from mise's activation (the bash repo's 115_mise.sh), which comes first on PATH.
+    "remoteEnv": {
+        "PATH": "${containerEnv:PATH}:/home/node/.local/share/mise/shims"
     },
     "remoteUser": "node",
-    "updateContentCommand": "npm install -g @devcontainers/cli"
+    "updateContentCommand": "npm install -g @devcontainers/cli",
+    // Installs the tools pinned in mise.toml: go and ssh-jwt, for pgtoken (src/auth/pgtoken) and its gates.
+    // Run through bash, so it does not depend on the file's executable bit surviving the mount.
+    "postCreateCommand": "bash .devcontainer/config/hooks/post-create.sh"
 }
