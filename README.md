@@ -1,6 +1,6 @@
 [![Release dev container features & Generate Documentation](https://github.com/compusib/devcontainer_features/actions/workflows/release.yaml/badge.svg)](https://github.com/compusib/devcontainer_features/actions/workflows/release.yaml)
 [![CI - Test Features](https://github.com/compusib/devcontainer_features/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/compusib/devcontainer_features/actions/workflows/test.yaml)
-# Compusib's features
+# $\color{#9c73fd}{\textsf{Compusib's features}}$
 This is a repo created according to the [devcontainer feature distribution specification](https://containers.dev/implementors/features-distribution/),
 by forking [devcontainers/feature-starter](https://github.com/devcontainers/feature-starter)
 
