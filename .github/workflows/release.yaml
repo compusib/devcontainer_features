@@ -16,6 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pgtoken's libraries are not in git: they are built here, for both architectures, and travel in the auth
+      # feature's package.
+      - name: "Build pgtoken (auth)"
+        run: make -C src/auth/pgtoken dist
+
       - name: "Publish Features"
         uses: devcontainers/action@v1
         with:
