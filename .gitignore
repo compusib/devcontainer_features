@@ -1,3 +1,6 @@
 devcontainer-lock.json
 # symlinked docs
 docs
+# pgtoken, built: `make` and `make dist` in src/auth/pgtoken
+src/auth/pgtoken/build
+src/auth/pgtoken/dist

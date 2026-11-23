@@ -25,4 +25,19 @@ check "config.env keeps the Go toolchain by default" \
 # Without mise on PATH, provisioning must warn and exit 0 (never block attach).
 check "provision-auth degrades gracefully without mise" provision-auth
 
+# pgtoken: the three libraries are installed side by side, and the linker finds the module by the name libpq 19
+# asks for. Nothing is preloaded: no libpq here is an 18. The PG_OAUTH_* variables are the container's to set.
+check "pgtoken's module is installed" test -f /usr/local/lib/pgtoken/libpq-oauth.so
+
+check "the mint is beside it" test -f /usr/local/lib/pgtoken/pgtoken-oauth.so
+
+check "and the loader" test -f /usr/local/lib/pgtoken/pgtoken.so
+
+check "the linker finds the module by the name libpq 19 asks for" \
+    bash -c '[ "$(/sbin/ldconfig -p | awk "/libpq-oauth.so / {print \$NF; exit}")" = /usr/local/lib/pgtoken/libpq-oauth.so ]'
+
+check "a shell of the user preloads nothing" bash -ic '[ -z "${LD_PRELOAD:-}" ]'
+
+check "the feature sets no PG_OAUTH_ variable" bash -ic '! env | grep -q "^PG_OAUTH_"'
+
 reportResults
